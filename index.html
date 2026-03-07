@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EtsyFinance — Know Your Real Profit</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --paper: #faf8f3;
+    --ink: #1a1612;
+    --ink-mid: #4a4540;
+    --ink-light: #8a8480;
+    --etsy: #f1641e;
+    --etsy-dark: #c94d12;
+    --etsy-pale: #fff0eb;
+    --green: #1a7a4a;
+    --green-pale: #e8f5ee;
+    --red: #c0392b;
+    --red-pale: #fdf0ee;
+    --gold: #c8941a;
+    --gold-pale: #fdf6e3;
+    --border: #e0d9ce;
+    --shadow: rgba(26,22,18,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: var(--ink);
+    padding: 0 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-mark {
+    width: 32px;
+    height: 32px;
+    background: var(--etsy);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Instrument Serif', serif;
+    font-size: 18px;
+    color: white;
+    font-style: italic;
+  }
+
+  .logo-text {
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px;
+    color: white;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-text span { color: var(--etsy); }
+
+  .header-tag {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    background: var(--ink);
+    padding: 72px 48px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(241,100,30,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    max-width: 680px;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--etsy);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--etsy);
+  }
+
+  .hero h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(36px, 5vw, 58px);
+    color: white;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em {
+    color: var(--etsy);
+    font-style: italic;
+  }
+
+  .hero p {
+    font-size: 17px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.7;
+    max-width: 520px;
+    margin-bottom: 40px;
+  }
+
+  /* ─── UPLOAD ZONE ─── */
+  .upload-zone {
+    border: 2px dashed rgba(241,100,30,0.4);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(241,100,30,0.04);
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--etsy);
+    background: rgba(241,100,30,0.08);
+    transform: translateY(-1px);
+  }
+
+  .upload-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    width: 52px;
+    height: 52px;
+    background: rgba(241,100,30,0.15);
+    border-radius: 12px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  .upload-zone h3 {
+    font-size: 17px;
+    color: white;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 20px;
+  }
+
+  .upload-cta {
+    display: inline-block;
+    background: var(--etsy);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 24px;
+    border-radius: 8px;
+    letter-spacing: 0.3px;
+    pointer-events: none;
+  }
+
+  .upload-hint {
+    margin-top: 16px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.25);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ─── HOW TO ─── */
+  .how-to {
+    padding: 56px 48px;
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .how-to h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 26px;
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  @media (max-width: 720px) {
+    .steps { grid-template-columns: 1fr; }
+    .hero, .how-to { padding: 48px 24px; }
+    header { padding: 0 20px; }
+  }
+
+  .step {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .step-num {
+    width: 32px;
+    height: 32px;
+    background: var(--etsy);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .step h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .step p {
+    font-size: 13px;
+    color: var(--ink-mid);
+    line-height: 1.6;
+  }
+
+  .step code {
+    background: var(--cream);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--etsy-dark);
+  }
+
+  /* ─── DEMO ─── */
+  .demo-section {
+    padding: 24px 48px;
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .demo-section p {
+    font-size: 13px;
+    color: var(--ink-mid);
+    margin-bottom: 10px;
+  }
+
+  .demo-btn {
+    background: none;
+    border: 1px solid var(--etsy);
+    color: var(--etsy);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+  }
+
+  .demo-btn:hover {
+    background: var(--etsy);
+    color: white;
+  }
+
+  /* ─── RESULTS ─── */
+  #results {
+    display: none;
+    padding: 48px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 720px) { #results { padding: 24px; } }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .results-header h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+  }
+
+  .results-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-light);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ─── KPI GRID ─── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+  .kpi-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .kpi-card.green::after { background: var(--green); }
+  .kpi-card.red::after { background: var(--red); }
+  .kpi-card.orange::after { background: var(--etsy); }
+  .kpi-card.gold::after { background: var(--gold); }
+
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 10px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .kpi-value {
+    font-family: 'Instrument Serif', serif;
+    font-size: 34px;
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: -1px;
+  }
+
+  .kpi-card.green .kpi-value { color: var(--green); }
+  .kpi-card.red .kpi-value { color: var(--red); }
+  .kpi-card.orange .kpi-value { color: var(--etsy); }
+  .kpi-card.gold .kpi-value { color: var(--gold); }
+
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--ink-light);
+  }
+
+  /* ─── FEE BREAKDOWN ─── */
+  .section-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .fee-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+
+  @media (max-width: 720px) { .fee-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .fee-grid { grid-template-columns: 1fr; } }
+
+  .fee-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  .fee-card-label {
+    font-size: 12px;
+    color: var(--ink-light);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .fee-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .fee-card-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--red);
+  }
+
+  .fee-card-pct {
+    font-size: 11px;
+    color: var(--ink-light);
+    margin-top: 2px;
+  }
+
+  /* ─── 1099-K PANEL ─── */
+  .alert-panel {
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 36px;
+    border: 1px solid;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .alert-panel.warning {
+    background: var(--gold-pale);
+    border-color: #e8c870;
+  }
+
+  .alert-panel.success {
+    background: var(--green-pale);
+    border-color: #90d4a8;
+  }
+
+  .alert-panel.info {
+    background: var(--etsy-pale);
+    border-color: #ffb890;
+  }
+
+  .alert-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .alert-panel h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .alert-panel p {
+    font-size: 13.5px;
+    color: var(--ink-mid);
+    line-height: 1.6;
+  }
+
+  .alert-panel strong { color: var(--ink); }
+
+  /* ─── MONTHLY CHART ─── */
+  .chart-wrap {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 36px;
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-mid);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 160px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    overflow-x: auto;
+  }
+
+  .bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex: 1;
+    min-width: 48px;
+  }
+
+  .bar-pair {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .bar {
+    width: 18px;
+    border-radius: 4px 4px 0 0;
+    transition: opacity 0.15s;
+    cursor: default;
+    position: relative;
+  }
+
+  .bar:hover { opacity: 0.8; }
+
+  .bar-label {
+    font-size: 10px;
+    color: var(--ink-light);
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+    margin-top: 6px;
+  }
+
+  /* ─── TRANSACTION TABLE ─── */
+  .table-wrap {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 36px;
+  }
+
+  .table-header-bar {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .table-header-bar h4 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .filter-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .filter-tab {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    color: var(--ink-mid);
+    transition: all 0.15s;
+  }
+
+  .filter-tab.active, .filter-tab:hover {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    font-family: 'DM Mono', monospace;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--paper); }
+
+  tbody td {
+    padding: 11px 16px;
+    color: var(--ink-mid);
+    vertical-align: middle;
+  }
+
+  tbody td:first-child { color: var(--ink); font-weight: 500; }
+  tbody td.amount-pos { color: var(--green); font-family: 'DM Mono', monospace; font-weight: 500; }
+  tbody td.amount-neg { color: var(--red); font-family: 'DM Mono', monospace; font-weight: 500; }
+  tbody td.amount-neutral { color: var(--ink); font-family: 'DM Mono', monospace; }
+
+  .type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .badge-sale { background: var(--green-pale); color: var(--green); }
+  .badge-fee, .badge-listing, .badge-transaction { background: var(--red-pale); color: var(--red); }
+  .badge-marketing { background: #fdf0e8; color: #c06010; }
+  .badge-deposit { background: #e8f0ff; color: #3050c0; }
+  .badge-refund { background: #fff0f8; color: #a01060; }
+  .badge-subscription { background: var(--cream); color: var(--ink-mid); }
+  .badge-other { background: var(--cream); color: var(--ink-mid); }
+
+  .show-more-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: var(--paper);
+    border: none;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--etsy);
+    cursor: pointer;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    transition: background 0.15s;
+  }
+
+  .show-more-btn:hover { background: var(--cream); }
+
+  /* ─── EXPORT ─── */
+  .export-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+  }
+
+  .export-btn {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .export-btn:hover { border-color: var(--etsy); color: var(--etsy); }
+
+  .export-btn.primary {
+    background: var(--etsy);
+    border-color: var(--etsy);
+    color: white;
+  }
+
+  .export-btn.primary:hover { background: var(--etsy-dark); border-color: var(--etsy-dark); }
+
+  /* ─── LOADING / ERROR ─── */
+  #loading { display: none; text-align: center; padding: 60px 48px; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--etsy);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #error-msg {
+    display: none;
+    margin: 24px 48px;
+    background: var(--red-pale);
+    border: 1px solid #f0b0a8;
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--red);
+  }
+
+  .tooltip {
+    position: absolute;
+    background: var(--ink);
+    color: white;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+    white-space: nowrap;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .bar:hover .tooltip { display: block; }
+
+  .footer {
+    text-align: center;
+    padding: 40px;
+    font-size: 12px;
+    color: var(--ink-light);
+    border-top: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .footer a { color: var(--etsy); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">E</div>
+    <div class="logo-text">Etsy<span>Finance</span></div>
+  </div>
+  <div class="header-tag">Free MVP · v0.1</div>
+</header>
+
+<!-- HERO / UPLOAD -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">For Etsy Sellers</div>
+    <h1>Finally know your<br><em>real profit.</em></h1>
+    <p>Upload your monthly Etsy Payments statement CSV and get an instant breakdown of gross revenue, every fee category, net profit, and your projected 1099-K amount — in seconds.</p>
+
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="csvInput" accept=".csv" />
+      <div class="upload-icon">📄</div>
+      <h3>Drop your Etsy Payments CSV here</h3>
+      <p>or click to browse files</p>
+      <div class="upload-cta">Choose CSV File</div>
+      <div class="upload-hint">Your data never leaves your browser — 100% private</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW TO GET THE CSV -->
+<section class="how-to">
+  <h2>How to get your CSV from Etsy</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h4>Go to your Payment Account</h4>
+      <p>In Etsy: <code>Finances</code> → <code>Payment Account</code>. Scroll to the bottom to find monthly statements.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h4>Select a month & click CSV</h4>
+      <p>Choose the month you want to analyze and click the <code>CSV</code> button to download it to your computer.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h4>Upload it above</h4>
+      <p>Drop it in the box above — your P&L, fee breakdown, and 1099-K estimate appear instantly.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO DATA BUTTON -->
+<section class="demo-section">
+  <p>Don't have a CSV handy? Try a realistic demo dataset:</p>
+  <button class="demo-btn" onclick="loadDemoData()">▶ Load Demo Data</button>
+</section>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p style="font-size:14px; color: var(--ink-light);">Parsing your statement...</p>
+</div>
+
+<!-- ERROR -->
+<div id="error-msg"></div>
+
+<!-- RESULTS -->
+<div id="results">
+  <div class="results-header">
+    <h2 id="results-title">Statement Analysis</h2>
+    <div class="results-meta" id="results-meta"></div>
+  </div>
+  <p style="font-size:13px; color:var(--ink-light); margin-bottom:32px;" id="results-sub"></p>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card orange">
+      <div class="kpi-label">Gross Revenue</div>
+      <div class="kpi-value" id="kpi-gross">—</div>
+      <div class="kpi-sub" id="kpi-gross-sub">Total from sales</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Total Fees</div>
+      <div class="kpi-value" id="kpi-fees">—</div>
+      <div class="kpi-sub" id="kpi-fees-pct">% of gross revenue</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Net Profit</div>
+      <div class="kpi-value" id="kpi-net">—</div>
+      <div class="kpi-sub" id="kpi-margin">Profit margin</div>
+    </div>
+    <div class="kpi-card gold">
+      <div class="kpi-label">1099-K Amount</div>
+      <div class="kpi-value" id="kpi-1099">—</div>
+      <div class="kpi-sub">Gross processed payments</div>
+    </div>
+  </div>
+
+  <!-- 1099K ALERT -->
+  <div id="alert-1099"></div>
+
+  <!-- FEE BREAKDOWN -->
+  <h3 class="section-title">Fee Breakdown</h3>
+  <div class="fee-grid" id="fee-grid"></div>
+
+  <!-- MONTHLY CHART (shows if multi-month) -->
+  <div id="chart-section" style="display:none;">
+    <h3 class="section-title">Monthly Trend</h3>
+    <div class="chart-wrap">
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--etsy)"></div>Gross Revenue</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Total Fees</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Net Profit</div>
+      </div>
+      <div class="chart-bars" id="chart-bars"></div>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS TABLE -->
+  <h3 class="section-title">Transactions</h3>
+  <div class="table-wrap">
+    <div class="table-header-bar">
+      <h4>All line items</h4>
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" onclick="filterTable('all', this)">All</button>
+        <button class="filter-tab" onclick="filterTable('Sale', this)">Sales</button>
+        <button class="filter-tab" onclick="filterTable('fees', this)">Fees</button>
+        <button class="filter-tab" onclick="filterTable('Deposit', this)">Deposits</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table id="txn-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Title</th>
+            <th>Amount</th>
+            <th>Fees & Taxes</th>
+            <th>Net</th>
+          </tr>
+        </thead>
+        <tbody id="txn-body"></tbody>
+      </table>
+    </div>
+    <button class="show-more-btn" id="show-more-btn" onclick="showMoreRows()" style="display:none;">
+      Show all rows ↓
+    </button>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="export-bar">
+    <button class="export-btn primary" onclick="exportCSV()">⬇ Export Clean P&amp;L (CSV)</button>
+    <button class="export-btn" onclick="window.print()">🖨 Print Summary</button>
+  </div>
+</div>
+
+<div class="footer">
+  EtsyFinance v0.1 — Your data is processed entirely in your browser. Nothing is uploaded or stored.<br>
+  <a href="#">Join waitlist for Pro features</a> · Not affiliated with Etsy, Inc.
+</div>
+
+<script>
+// ─── STATE ───
+let parsedData = [];
+let allRows = [];
+let currentFilter = 'all';
+const MAX_ROWS_INITIAL = 30;
+
+// ─── UPLOAD HANDLERS ───
+const csvInput = document.getElementById('csvInput');
+const dropZone = document.getElementById('dropZone');
+
+csvInput.addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) processFile(file);
+  else showError('Please drop a .csv file.');
+});
+
+function processFile(file) {
+  showLoading(true);
+  hideError();
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      parseAndRender(e.target.result, file.name);
+    } catch(err) {
+      showError('Could not parse file: ' + err.message);
+    }
+    showLoading(false);
+  };
+  reader.readAsText(file);
+}
+
+// ─── CSV PARSING ───
+function parseAndRender(csvText, filename) {
+  const result = Papa.parse(csvText.trim(), {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: h => h.trim()
+  });
+
+  if (!result.data || result.data.length === 0) {
+    showError('The CSV appears to be empty or could not be read.');
+    return;
+  }
+
+  // Normalize column names (handle variations)
+  const rows = result.data.map(r => {
+    const n = {};
+    for (const k of Object.keys(r)) {
+      const key = k.trim().toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9_]/g, '');
+      n[key] = (r[k] || '').trim();
+    }
+    return n;
+  });
+
+  // Detect columns
+  const sample = rows[0];
+  const cols = Object.keys(sample);
+
+  // Find key columns (flexible matching)
+  const find = names => cols.find(c => names.some(n => c.includes(n))) || null;
+
+  const COL = {
+    date:     find(['date']),
+    type:     find(['type']),
+    title:    find(['title']),
+    info:     find(['info']),
+    currency: find(['currency']),
+    amount:   find(['amount']),
+    fees:     find(['fees_and_taxes','fees','fee']),
+    net:      find(['net'])
+  };
+
+  if (!COL.amount && !COL.net) {
+    showError('Could not detect Etsy Payments columns. Make sure you downloaded from Finances → Payment Account → [Month] → CSV.');
+    return;
+  }
+
+  parsedData = rows;
+  allRows = rows;
+
+  renderResults(rows, COL, filename);
+}
+
+function parseAmt(val) {
+  if (!val) return 0;
+  // Remove currency symbols, spaces, handle parentheses as negative
+  const neg = val.includes('(') && val.includes(')');
+  const n = parseFloat(val.replace(/[^0-9.\-]/g, '')) || 0;
+  return neg ? -Math.abs(n) : n;
+}
+
+function fmt(n, currency = '$') {
+  const abs = Math.abs(n);
+  const str = abs.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (n < 0 ? '-' : '') + currency + str;
+}
+
+function fmtPct(n) { return (n * 100).toFixed(1) + '%'; }
+
+// ─── RENDER RESULTS ───
+function renderResults(rows, COL, filename) {
+  const currency = rows.find(r => r[COL.currency])
+    ? (rows.find(r => r[COL.currency])[COL.currency] || 'USD')
+    : 'USD';
+  const sym = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$';
+
+  // Classify each row
+  const typed = rows.map(r => {
+    const type = (r[COL.type] || '').trim();
+    const amount = parseAmt(r[COL.amount]);
+    const fees = parseAmt(r[COL.fees]);
+    const net = parseAmt(r[COL.net]);
+    const date = r[COL.date] || '';
+    const title = r[COL.title] || '';
+    const info = r[COL.info] || '';
+    return { type, amount, fees, net, date, title, info, raw: r };
+  });
+
+  // Aggregate
+  const isSale = t => t.type.toLowerCase() === 'sale';
+  const isFeeType = t => ['transaction','listing','fee','marketing','subscription'].includes(t.type.toLowerCase());
+  const isDeposit = t => t.type.toLowerCase() === 'deposit';
+  const isRefund = t => t.type.toLowerCase() === 'refund';
+
+  const sales = typed.filter(isSale);
+  const feeRows = typed.filter(isFeeType);
+  const deposits = typed.filter(isDeposit);
+  const refunds = typed.filter(isRefund);
+
+  const grossRevenue = sales.reduce((s, r) => s + r.amount, 0);
+  const grossRefunds = Math.abs(refunds.reduce((s, r) => s + r.amount, 0));
+  const totalFees = Math.abs(feeRows.reduce((s, r) => s + r.fees + r.amount, 0));
+  const netProfit = grossRevenue - grossRefunds - totalFees;
+  const margin = grossRevenue > 0 ? netProfit / grossRevenue : 0;
+
+  // 1099-K = gross payment processing (sales + their payment fees)
+  // Etsy reports gross sales volume (pre-fee) on 1099-K
+  const k1099Gross = grossRevenue; // Etsy 1099-K reports gross sales
+
+  // Fee breakdown by type
+  const feeByType = {};
+  for (const r of feeRows) {
+    const key = r.type.charAt(0).toUpperCase() + r.type.slice(1).toLowerCase();
+    const amt = Math.abs(r.fees + r.amount);
+    feeByType[key] = (feeByType[key] || 0) + amt;
+  }
+  // Also capture payment fees baked into sales rows
+  const paymentFees = Math.abs(sales.reduce((s, r) => s + r.fees, 0));
+  if (paymentFees > 0) feeByType['Payment Processing'] = (feeByType['Payment Processing'] || 0) + paymentFees;
+
+  // Date range
+  const dates = typed.map(r => r.date).filter(Boolean);
+  const dateRange = dates.length ? `${dates[dates.length - 1]} – ${dates[0]}` : filename;
+
+  // Monthly breakdown (if multi-month data)
+  const monthly = {};
+  for (const r of typed) {
+    if (!r.date) continue;
+    const parts = r.date.split('/');
+    const key = parts.length >= 2 ? `${parts[0]}/${parts.length >= 3 ? parts[2].slice(-2) : ''}` : r.date.slice(0,7);
+    if (!monthly[key]) monthly[key] = { gross: 0, fees: 0 };
+    if (isSale(r)) monthly[key].gross += r.amount;
+    if (isFeeType(r)) monthly[key].fees += Math.abs(r.fees + r.amount);
+    if (isSale(r)) monthly[key].fees += Math.abs(r.fees);
+  }
+  const monthKeys = Object.keys(monthly).sort();
+
+  // ── Render KPIs ──
+  document.getElementById('results-title').textContent = 'Statement Analysis';
+  document.getElementById('results-meta').textContent = `${rows.length} transactions · ${currency}`;
+  document.getElementById('results-sub').textContent = `Date range: ${dateRange} · ${sales.length} sales · ${refunds.length} refunds · ${deposits.length} deposits`;
+
+  document.getElementById('kpi-gross').textContent = fmt(grossRevenue, sym);
+  document.getElementById('kpi-gross-sub').textContent = `${sales.length} sale${sales.length !== 1 ? 's' : ''} · ${fmt(grossRefunds, sym)} refunded`;
+
+  document.getElementById('kpi-fees').textContent = fmt(totalFees, sym);
+  document.getElementById('kpi-fees-pct').textContent = grossRevenue > 0 ? fmtPct(totalFees / grossRevenue) + ' of gross revenue' : 'of gross revenue';
+
+  document.getElementById('kpi-net').textContent = fmt(netProfit, sym);
+  document.getElementById('kpi-margin').textContent = fmtPct(margin) + ' profit margin';
+
+  document.getElementById('kpi-1099').textContent = fmt(k1099Gross, sym);
+
+  // ── 1099-K Alert ──
+  const alertEl = document.getElementById('alert-1099');
+  const threshold1099 = 600;
+  if (k1099Gross >= threshold1099) {
+    alertEl.innerHTML = `
+      <div class="alert-panel warning">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <h4>1099-K Threshold Reached</h4>
+          <p>Your gross payments of <strong>${fmt(k1099Gross, sym)}</strong> exceed the $${threshold1099} reporting threshold.
+          Etsy will report your <em>gross</em> sales (pre-fee) on your 1099-K — <strong>not</strong> your net profit of ${fmt(netProfit, sym)}.
+          You can deduct the ${fmt(totalFees, sym)} in fees as a business expense. Save this report for your accountant.</p>
+        </div>
+      </div>`;
+  } else {
+    alertEl.innerHTML = `
+      <div class="alert-panel info">
+        <div class="alert-icon">ℹ️</div>
+        <div>
+          <h4>Below 1099-K Threshold</h4>
+          <p>Your gross payments of <strong>${fmt(k1099Gross, sym)}</strong> are below the reporting threshold for this period.
+          Note: Etsy reports your <em>gross</em> sales on the 1099-K — always track your fees separately as deductible business expenses.</p>
+        </div>
+      </div>`;
+  }
+
+  // ── Fee Cards ──
+  const feeColors = {
+    'Transaction': '#e05050',
+    'Listing': '#e07020',
+    'Fee': '#d06060',
+    'Marketing': '#c07830',
+    'Subscription': '#8080a0',
+    'Payment Processing': '#c04040',
+  };
+
+  const feeGrid = document.getElementById('fee-grid');
+  feeGrid.innerHTML = '';
+
+  const sortedFees = Object.entries(feeByType).sort((a,b) => b[1] - a[1]);
+  for (const [label, amt] of sortedFees) {
+    const color = feeColors[label] || '#888';
+    const pct = grossRevenue > 0 ? fmtPct(amt / grossRevenue) : '—';
+    feeGrid.innerHTML += `
+      <div class="fee-card">
+        <div class="fee-card-label">
+          <div class="fee-dot" style="background:${color}"></div>
+          ${label} Fees
+        </div>
+        <div class="fee-card-amount">${fmt(amt, sym)}</div>
+        <div class="fee-card-pct">${pct} of gross revenue</div>
+      </div>`;
+  }
+
+  if (sortedFees.length === 0) {
+    feeGrid.innerHTML = '<div class="fee-card" style="grid-column:1/-1"><div class="fee-card-label">No fee rows detected in this statement</div></div>';
+  }
+
+  // ── Monthly Chart ──
+  const chartSection = document.getElementById('chart-section');
+  if (monthKeys.length >= 2) {
+    chartSection.style.display = 'block';
+    const maxVal = Math.max(...monthKeys.map(k => monthly[k].gross), 1);
+    const barsEl = document.getElementById('chart-bars');
+    barsEl.innerHTML = '';
+    for (const k of monthKeys) {
+      const { gross, fees } = monthly[k];
+      const net = gross - fees;
+      const hGross = Math.round((gross / maxVal) * 140);
+      const hFees = Math.round((fees / maxVal) * 140);
+      const hNet = Math.max(Math.round((Math.max(net, 0) / maxVal) * 140), 1);
+      barsEl.innerHTML += `
+        <div class="bar-group">
+          <div class="bar-pair">
+            <div class="bar" style="height:${hGross}px; background:var(--etsy)">
+              <div class="tooltip">${fmt(gross, sym)}</div>
+            </div>
+            <div class="bar" style="height:${hFees}px; background:var(--red)">
+              <div class="tooltip">${fmt(fees, sym)}</div>
+            </div>
+            <div class="bar" style="height:${hNet}px; background:var(--green)">
+              <div class="tooltip">${fmt(net, sym)}</div>
+            </div>
+          </div>
+          <div class="bar-label">${k}</div>
+        </div>`;
+    }
+  } else {
+    chartSection.style.display = 'none';
+  }
+
+  // ── Transactions Table ──
+  renderTable(typed, COL, sym, 'all');
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── TABLE RENDERING ───
+function getBadgeClass(type) {
+  const t = (type || '').toLowerCase();
+  if (t === 'sale') return 'badge-sale';
+  if (t === 'fee') return 'badge-fee';
+  if (t === 'listing') return 'badge-listing';
+  if (t === 'transaction') return 'badge-transaction';
+  if (t === 'marketing') return 'badge-marketing';
+  if (t === 'deposit') return 'badge-deposit';
+  if (t === 'refund') return 'badge-refund';
+  if (t === 'subscription') return 'badge-subscription';
+  return 'badge-other';
+}
+
+function getAmtClass(n) {
+  if (n > 0) return 'amount-pos';
+  if (n < 0) return 'amount-neg';
+  return 'amount-neutral';
+}
+
+function renderTable(typed, COL, sym, filter) {
+  const isFeeType = t => ['transaction','listing','fee','marketing','subscription'].includes((t.type||'').toLowerCase());
+
+  let filtered = typed;
+  if (filter === 'Sale') filtered = typed.filter(r => r.type.toLowerCase() === 'sale');
+  else if (filter === 'fees') filtered = typed.filter(isFeeType);
+  else if (filter === 'Deposit') filtered = typed.filter(r => r.type.toLowerCase() === 'deposit');
+
+  const tbody = document.getElementById('txn-body');
+  tbody.innerHTML = '';
+
+  const showBtn = document.getElementById('show-more-btn');
+  const toShow = filtered.slice(0, MAX_ROWS_INITIAL);
+
+  for (const r of toShow) {
+    const title = (r.title || '').slice(0, 40) + ((r.title||'').length > 40 ? '…' : '');
+    tbody.innerHTML += `
+      <tr>
+        <td style="font-family:'DM Mono',monospace; font-size:12px;">${r.date}</td>
+        <td><span class="type-badge ${getBadgeClass(r.type)}">${r.type || '—'}</span></td>
+        <td style="color:var(--ink-mid); max-width:240px;" title="${r.title}">${title || '—'}</td>
+        <td class="${getAmtClass(r.amount)}">${r.amount !== 0 ? fmt(r.amount, sym) : '—'}</td>
+        <td class="${getAmtClass(r.fees)}">${r.fees !== 0 ? fmt(r.fees, sym) : '—'}</td>
+        <td class="${getAmtClass(r.net)}">${r.net !== 0 ? fmt(r.net, sym) : '—'}</td>
+      </tr>`;
+  }
+
+  if (filtered.length > MAX_ROWS_INITIAL) {
+    showBtn.style.display = 'block';
+    showBtn.textContent = `Show all ${filtered.length} rows ↓`;
+    showBtn.onclick = () => {
+      const rest = filtered.slice(MAX_ROWS_INITIAL);
+      for (const r of rest) {
+        const title = (r.title || '').slice(0, 40) + ((r.title||'').length > 40 ? '…' : '');
+        tbody.innerHTML += `
+          <tr>
+            <td style="font-family:'DM Mono',monospace;font-size:12px;">${r.date}</td>
+            <td><span class="type-badge ${getBadgeClass(r.type)}">${r.type || '—'}</span></td>
+            <td style="color:var(--ink-mid);max-width:240px;" title="${r.title}">${title || '—'}</td>
+            <td class="${getAmtClass(r.amount)}">${r.amount !== 0 ? fmt(r.amount, sym) : '—'}</td>
+            <td class="${getAmtClass(r.fees)}">${r.fees !== 0 ? fmt(r.fees, sym) : '—'}</td>
+            <td class="${getAmtClass(r.net)}">${r.net !== 0 ? fmt(r.net, sym) : '—'}</td>
+          </tr>`;
+      }
+      showBtn.style.display = 'none';
+    };
+  } else {
+    showBtn.style.display = 'none';
+  }
+}
+
+function filterTable(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const isFeeType = t => ['transaction','listing','fee','marketing','subscription'].includes((t.type||'').toLowerCase());
+  const typed = parsedData.map(r => {
+    const coln = Object.keys(r);
+    const find = names => coln.find(c => names.some(n => c.includes(n))) || null;
+    const COL = {
+      date: find(['date']), type: find(['type']), title: find(['title']),
+      amount: find(['amount']), fees: find(['fees_and_taxes','fees','fee']), net: find(['net'])
+    };
+    return {
+      type: (r[COL.type] || '').trim(),
+      amount: parseAmt(r[COL.amount]),
+      fees: parseAmt(r[COL.fees]),
+      net: parseAmt(r[COL.net]),
+      date: r[COL.date] || '',
+      title: r[COL.title] || '',
+    };
+  });
+
+  const sym = '$';
+  let filtered = typed;
+  if (filter === 'Sale') filtered = typed.filter(r => r.type.toLowerCase() === 'sale');
+  else if (filter === 'fees') filtered = typed.filter(r => isFeeType(r));
+  else if (filter === 'Deposit') filtered = typed.filter(r => r.type.toLowerCase() === 'deposit');
+
+  const tbody = document.getElementById('txn-body');
+  tbody.innerHTML = '';
+  const showBtn = document.getElementById('show-more-btn');
+  const toShow = filtered.slice(0, MAX_ROWS_INITIAL);
+
+  for (const r of toShow) {
+    const title = (r.title || '').slice(0, 40) + ((r.title||'').length > 40 ? '…' : '');
+    tbody.innerHTML += `
+      <tr>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;">${r.date}</td>
+        <td><span class="type-badge ${getBadgeClass(r.type)}">${r.type || '—'}</span></td>
+        <td style="color:var(--ink-mid);max-width:240px;">${title || '—'}</td>
+        <td class="${getAmtClass(r.amount)}">${r.amount !== 0 ? fmt(r.amount, sym) : '—'}</td>
+        <td class="${getAmtClass(r.fees)}">${r.fees !== 0 ? fmt(r.fees, sym) : '—'}</td>
+        <td class="${getAmtClass(r.net)}">${r.net !== 0 ? fmt(r.net, sym) : '—'}</td>
+      </tr>`;
+  }
+
+  if (filtered.length > MAX_ROWS_INITIAL) {
+    showBtn.style.display = 'block';
+    showBtn.textContent = `Show all ${filtered.length} rows ↓`;
+  } else {
+    showBtn.style.display = 'none';
+  }
+}
+
+// ─── DEMO DATA ───
+function loadDemoData() {
+  const demo = `Date,Type,Title,Info,Currency,Amount,Fees & Taxes,Net
+03/07/2026,Sale,Payment for Order #2891234,,USD,47.00,-2.20,44.80
+03/07/2026,Transaction,Vintage Ceramic Mug,Order #2891234,USD,0.00,-1.88,-1.88
+03/06/2026,Sale,Payment for Order #2889102,,USD,32.50,-1.53,30.97
+03/06/2026,Transaction,Hand-dyed Linen Tote,Order #2889102,USD,0.00,-1.30,-1.30
+03/06/2026,Listing,Hand-dyed Linen Tote,,USD,0.00,-0.20,-0.20
+03/05/2026,Sale,Payment for Order #2885761,,USD,89.00,-4.18,84.82
+03/05/2026,Transaction,Custom Portrait Print,Order #2885761,USD,0.00,-3.56,-3.56
+03/04/2026,Sale,Payment for Order #2882133,,USD,24.00,-1.13,22.87
+03/04/2026,Transaction,Pressed Flower Bookmark Set,Order #2882133,USD,0.00,-0.96,-0.96
+03/04/2026,Listing,Pressed Flower Bookmark Set,,USD,0.00,-0.20,-0.20
+03/03/2026,Sale,Payment for Order #2879088,,USD,56.00,-2.63,53.37
+03/03/2026,Transaction,Macrame Wall Hanging,Order #2879088,USD,0.00,-2.24,-2.24
+03/02/2026,Sale,Payment for Order #2876452,,USD,38.00,-1.79,36.21
+03/02/2026,Transaction,Beeswax Candle Set,Order #2876452,USD,0.00,-1.52,-1.52
+03/01/2026,Marketing,Offsite Ads Fee,,USD,0.00,-8.70,-8.70
+03/01/2026,Sale,Payment for Order #2872011,,USD,44.00,-2.07,41.93
+03/01/2026,Transaction,Embroidered Pillow Cover,Order #2872011,USD,0.00,-1.76,-1.76
+02/28/2026,Sale,Payment for Order #2869745,,USD,29.50,-1.39,28.11
+02/28/2026,Transaction,Watercolor Art Print,Order #2869745,USD,0.00,-1.18,-1.18
+02/27/2026,Sale,Payment for Order #2867001,,USD,67.00,-3.15,63.85
+02/27/2026,Transaction,Hand-painted Tray,Order #2867001,USD,0.00,-2.68,-2.68
+02/26/2026,Deposit,Deposit to bank account: $280.16,,USD,0.00,0.00,0.00
+02/25/2026,Listing,Vintage Ceramic Mug,,USD,0.00,-0.20,-0.20
+02/25/2026,Listing,Custom Portrait Print,,USD,0.00,-0.20,-0.20
+02/24/2026,Sale,Payment for Order #2860120,,USD,51.00,-2.40,48.60
+02/24/2026,Transaction,Ceramic Ring Dish,Order #2860120,USD,0.00,-2.04,-2.04
+02/23/2026,Refund,Order #2855501 Refund,,USD,-18.00,0.00,-18.00
+02/22/2026,Sale,Payment for Order #2855501,,USD,18.00,-0.85,17.15
+02/22/2026,Transaction,Dried Wildflower Wreath,Order #2855501,USD,0.00,-0.72,-0.72
+02/21/2026,Subscription,Etsy Plus Subscription,,USD,0.00,-10.00,-10.00
+02/20/2026,Sale,Payment for Order #2849008,,USD,73.00,-3.43,69.57
+02/20/2026,Transaction,Custom Name Cutting Board,Order #2849008,USD,0.00,-2.92,-2.92
+02/19/2026,Marketing,Offsite Ads Fee,,USD,0.00,-6.20,-6.20
+02/18/2026,Deposit,Deposit to bank account: $312.44,,USD,0.00,0.00,0.00
+02/17/2026,Sale,Payment for Order #2841234,,USD,42.00,-1.97,40.03
+02/17/2026,Transaction,Soy Wax Candle,Order #2841234,USD,0.00,-1.68,-1.68`;
+
+  showLoading(true);
+  setTimeout(() => {
+    parseAndRender(demo, 'demo-data.csv');
+    showLoading(false);
+  }, 400);
+}
+
+// ─── EXPORT ───
+function exportCSV() {
+  const rows = [['Date','Type','Title','Amount','Fees & Taxes','Net']];
+  const tbody = document.querySelectorAll('#txn-body tr');
+  for (const tr of tbody) {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 6) {
+      rows.push([
+        cells[0].textContent.trim(),
+        cells[1].textContent.trim(),
+        cells[2].getAttribute('title') || cells[2].textContent.trim(),
+        cells[3].textContent.trim(),
+        cells[4].textContent.trim(),
+        cells[5].textContent.trim(),
+      ]);
+    }
+  }
+  const csv = rows.map(r => r.map(c => `"${c.replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'etsyfinance-export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── UI HELPERS ───
+function showLoading(show) {
+  document.getElementById('loading').style.display = show ? 'block' : 'none';
+  if (show) document.getElementById('results').style.display = 'none';
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = '⚠️ ' + msg;
+  el.style.display = 'block';
+  showLoading(false);
+}
+
+function hideError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+</script>
+</body>
+</html>
