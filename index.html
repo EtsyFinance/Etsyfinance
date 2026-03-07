@@ -1671,20 +1671,14 @@ async function submitWaitlist() {
   feedback.className = 'signup-feedback';
 
   try {
-    const res = await fetch('https://api.beehiiv.com/v2/publications/pub_81686829-2856-460e-84c6-5b9078fd9fc8/subscriptions', {
+    const res = await fetch('/api/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        reactivate_existing: false,
-        send_welcome_email: true,
-        utm_source: 'etsyfinance_website',
-        utm_medium: 'waitlist_form'
-      })
+      body: JSON.stringify({ email })
     });
 
-    if (res.ok || res.status === 201) {
-      feedback.textContent = '✓ You're on the list! We'll be in touch.';
+    if (res.ok) {
+      feedback.textContent = '✓ You\'re on the list! We\'ll be in touch.';
       feedback.className = 'signup-feedback success';
       emailEl.value = '';
       btn.textContent = 'Joined ✓';
@@ -1692,10 +1686,8 @@ async function submitWaitlist() {
       throw new Error('API error ' + res.status);
     }
   } catch (err) {
-    // Fallback: open Beehiiv subscribe page in new tab
-    window.open('https://subscribe-forms.beehiiv.com/81686829-2856-460e-84c6-5b9078fd9fc8', '_blank');
-    feedback.textContent = '↗ Opened signup in a new tab.';
-    feedback.className = 'signup-feedback success';
+    feedback.textContent = 'Something went wrong. Please try again.';
+    feedback.className = 'signup-feedback error';
     btn.textContent = 'Join →';
     btn.disabled = false;
   }
