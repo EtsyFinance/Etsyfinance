@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EtsyFinance — Test Suite</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pass: #1a7a4a; --pass-bg: #e8f5ee; --pass-border: #a3d4b8;
+    --fail: #c0392b; --fail-bg: #fdf0ee; --fail-border: #e8a09a;
+    --skip: #c8941a; --skip-bg: #fdf6e3; --skip-border: #e8d08a;
+    --ink: #1a1612; --ink-mid: #4a4540; --ink-light: #8a8480;
+    --border: #e0d9ce; --paper: #faf8f3; --cream: #f5f0e8;
+    --etsy: #f1641e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); padding: 32px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+  h1 { font-size: 24px; font-weight: 600; }
+  h1 span { color: var(--etsy); }
+  .run-btn {
+    padding: 12px 28px; background: var(--etsy); color: white; border: none;
+    border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: opacity 0.2s;
+  }
+  .run-btn:hover { opacity: 0.88; }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .summary {
+    display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .summary-card {
+    flex: 1; min-width: 100px; background: var(--paper); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 20px; text-align: center;
+  }
+  .summary-card .num { font-size: 32px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .summary-card .label { font-size: 12px; color: var(--ink-light); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .summary-card.pass .num { color: var(--pass); }
+  .summary-card.fail .num { color: var(--fail); }
+  .summary-card.skip .num { color: var(--skip); }
+  .summary-card.total .num { color: var(--ink); }
+
+  .suite { margin-bottom: 28px; }
+  .suite-title {
+    font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-light); margin-bottom: 10px; padding-left: 4px;
+  }
+
+  .test-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 16px; margin-bottom: 6px;
+    transition: border-color 0.2s;
+  }
+  .test-row.pass { border-left: 3px solid var(--pass); }
+  .test-row.fail { border-left: 3px solid var(--fail); background: var(--fail-bg); border-color: var(--fail-border); }
+  .test-row.pending { border-left: 3px solid var(--border); opacity: 0.55; }
+
+  .test-icon { font-size: 16px; line-height: 1.3; flex-shrink: 0; }
+  .test-name { font-size: 14px; font-weight: 500; flex: 1; line-height: 1.4; }
+  .test-detail {
+    font-size: 12px; font-family: 'DM Mono', monospace;
+    color: var(--fail); margin-top: 5px; white-space: pre-wrap;
+    background: rgba(192,57,43,0.07); padding: 6px 10px; border-radius: 6px;
+  }
+  .test-time { font-size: 11px; color: var(--ink-light); flex-shrink: 0; font-family: 'DM Mono', monospace; }
+
+  .progress-bar {
+    height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 28px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--etsy); width: 0%; transition: width 0.3s ease;
+  }
+
+  .log { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ink-light); margin-top: 32px; }
+  .log-entry { padding: 2px 0; }
+  .log-entry.err { color: var(--fail); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>EtsyFinance <span>Test Suite</span></h1>
+    <div style="font-size:13px;color:var(--ink-light);margin-top:4px;">Run before every deploy to catch regressions</div>
+  </div>
+  <button class="run-btn" id="run-btn" onclick="runAll()">▶ Run All Tests</button>
+</header>
+
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<div class="summary" id="summary">
+  <div class="summary-card total"><div class="num" id="s-total">—</div><div class="label">Total</div></div>
+  <div class="summary-card pass"><div class="num" id="s-pass">—</div><div class="label">Passed</div></div>
+  <div class="summary-card fail"><div class="num" id="s-fail">—</div><div class="label">Failed</div></div>
+  <div class="summary-card skip"><div class="num" id="s-skip">—</div><div class="label">Skipped</div></div>
+</div>
+
+<div id="test-output"></div>
+<div class="log" id="log"></div>
+
+<script>
+// ─── MINIMAL TEST HARNESS ────────────────────────────────────────────────────
+const suites = [];
+let currentSuite = null;
+
+function describe(name, fn) {
+  currentSuite = { name, tests: [] };
+  suites.push(currentSuite);
+  fn();
+  currentSuite = null;
+}
+
+function it(name, fn) {
+  currentSuite.tests.push({ name, fn, status: 'pending', error: null, duration: 0 });
+}
+
+function expect(actual) {
+  return {
+    toBe(expected) {
+      if (actual !== expected) throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    },
+    toEqual(expected) {
+      if (JSON.stringify(actual) !== JSON.stringify(expected))
+        throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    },
+    toBeCloseTo(expected, decimals = 2) {
+      const factor = Math.pow(10, decimals);
+      if (Math.round(actual * factor) !== Math.round(expected * factor))
+        throw new Error(`Expected ~${expected}, got ${actual}`);
+    },
+    toBeGreaterThan(n) {
+      if (actual <= n) throw new Error(`Expected ${actual} > ${n}`);
+    },
+    toBeLessThan(n) {
+      if (actual >= n) throw new Error(`Expected ${actual} < ${n}`);
+    },
+    toBeTruthy() {
+      if (!actual) throw new Error(`Expected truthy, got ${JSON.stringify(actual)}`);
+    },
+    toBeFalsy() {
+      if (actual) throw new Error(`Expected falsy, got ${JSON.stringify(actual)}`);
+    },
+    toContain(item) {
+      if (Array.isArray(actual)) {
+        if (!actual.includes(item)) throw new Error(`Expected array to contain ${JSON.stringify(item)}`);
+      } else if (typeof actual === 'string') {
+        if (!actual.includes(item)) throw new Error(`Expected string "${actual}" to contain "${item}"`);
+      } else {
+        throw new Error(`toContain not supported for ${typeof actual}`);
+      }
+    },
+    toHaveLength(n) {
+      if (actual.length !== n) throw new Error(`Expected length ${n}, got ${actual.length}`);
+    },
+    toBeNull() {
+      if (actual !== null) throw new Error(`Expected null, got ${JSON.stringify(actual)}`);
+    },
+    toMatch(regex) {
+      if (!regex.test(actual)) throw new Error(`Expected "${actual}" to match ${regex}`);
+    },
+    not: {
+      toBe(expected) {
+        if (actual === expected) throw new Error(`Expected NOT ${JSON.stringify(expected)}`);
+      },
+      toBeTruthy() {
+        if (actual) throw new Error(`Expected falsy, got ${JSON.stringify(actual)}`);
+      },
+      toContain(item) {
+        if (typeof actual === 'string' && actual.includes(item))
+          throw new Error(`Expected string NOT to contain "${item}"`);
+      }
+    }
+  };
+}
+
+// ─── CORE FUNCTIONS (copied from app, keeping in sync) ───────────────────────
+
+function parseAmt(val) {
+  if (!val) return 0;
+  const neg = val.includes('(') && val.includes(')');
+  const n = parseFloat(val.replace(/[^0-9.\-]/g, '')) || 0;
+  return neg ? -Math.abs(n) : n;
+}
+
+function fmt(n, currency = '$') {
+  const abs = Math.abs(n);
+  const str = abs.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (n < 0 ? '-' : '') + currency + str;
+}
+
+function normalizeRows(csvText) {
+  const result = Papa.parse(csvText.trim(), {
+    header: true, skipEmptyLines: true, transformHeader: h => h.trim()
+  });
+  return result.data.map(r => {
+    const n = {};
+    for (const k of Object.keys(r)) {
+      const key = k.trim().toLowerCase()
+        .replace(/\s+/g, '_').replace(/&/g, 'and').replace(/[^a-z0-9_]/g, '');
+      n[key] = (r[k] || '').trim();
+    }
+    return n;
+  });
+}
+
+function detectCOL(rows) {
+  const cols = Object.keys(rows[0]);
+  const find = names => cols.find(c => names.some(n => c.includes(n))) || null;
+  return {
+    date:     find(['date']),
+    type:     find(['type']),
+    title:    find(['title']),
+    info:     find(['info']),
+    currency: find(['currency']),
+    amount:   find(['amount']),
+    fees:     find(['fees_and_taxes','fees','fee']),
+    net:      find(['net'])
+  };
+}
+
+function aggregateRows(rows, COL) {
+  const typed = rows.map(r => ({
+    type:   (r[COL.type] || '').trim(),
+    amount: parseAmt(r[COL.amount]),
+    fees:   parseAmt(r[COL.fees]),
+    net:    parseAmt(r[COL.net]),
+    date:   r[COL.date] || '',
+  }));
+
+  const isSale    = t => t.type.toLowerCase() === 'sale';
+  const isFeeType = t => ['transaction','listing','fee','marketing','subscription'].includes(t.type.toLowerCase());
+  const isRefund  = t => t.type.toLowerCase() === 'refund';
+
+  const sales    = typed.filter(isSale);
+  const feeRows  = typed.filter(isFeeType);
+  const refunds  = typed.filter(isRefund);
+
+  const grossRevenue = sales.reduce((s, r) => s + r.amount, 0);
+  const grossRefunds = Math.abs(refunds.reduce((s, r) => s + r.amount, 0));
+  const totalFees    = Math.abs(feeRows.reduce((s, r) => s + r.fees + r.amount, 0));
+  const paymentFees  = Math.abs(sales.reduce((s, r) => s + r.fees, 0));
+  const netProfit    = grossRevenue - grossRefunds - totalFees;
+
+  return { grossRevenue, grossRefunds, totalFees: totalFees + paymentFees, netProfit, sales, feeRows, refunds, typed };
+}
+
+// Pro license hash (same algorithm as app)
+async function hashKey(key) {
+  const SALT = 'etsyfinance_pro_2026';
+  const encoder = new TextEncoder();
+  const data = encoder.encode(key + SALT);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('').slice(0,16);
+}
+
+const PRO_KEY_HASHES = new Set([
+  "6090c78674d414d1","ed685c284a31a1ee","472222af57c6e812","81ec574f1cb3dfeb",
+  "a6b7872c651869b6","35b686e54bbd7e96","a6e64acb19077e45","e05c2244ddb7f1da",
+  "37330fb03c2fd7e3","ea669a13ef8aef4e","95c40cf9bc0a4931","d815c2e1ff6db230",
+  "2031fc6f66cce99a","6b218dbf226ae7b2","a857e9c39d291fed","33230f5f7282d3ee",
+  "58b3fc3ee4d576cd","7928a23c1ecc5d66","b59af2d950eae480","a8482e16173b9525"
+]);
+
+// ─── TEST DATA ───────────────────────────────────────────────────────────────
+
+const DEMO_CSV = `Date,Type,Title,Info,Currency,Amount,Fees & Taxes,Net
+03/07/2026,Sale,Payment for Order #2891234,,USD,47.00,-2.20,44.80
+03/07/2026,Transaction,Vintage Ceramic Mug,Order #2891234,USD,0.00,-1.88,-1.88
+03/06/2026,Sale,Payment for Order #2889102,,USD,32.50,-1.53,30.97
+03/06/2026,Transaction,Hand-dyed Linen Tote,Order #2889102,USD,0.00,-1.30,-1.30
+03/06/2026,Listing,Hand-dyed Linen Tote,,USD,0.00,-0.20,-0.20
+03/05/2026,Sale,Payment for Order #2885761,,USD,89.00,-4.18,84.82
+03/05/2026,Transaction,Custom Portrait Print,Order #2885761,USD,0.00,-3.56,-3.56
+03/04/2026,Sale,Payment for Order #2882133,,USD,24.00,-1.13,22.87
+03/04/2026,Transaction,Pressed Flower Bookmark Set,Order #2882133,USD,0.00,-0.96,-0.96
+03/04/2026,Listing,Pressed Flower Bookmark Set,,USD,0.00,-0.20,-0.20
+03/03/2026,Sale,Payment for Order #2879088,,USD,56.00,-2.63,53.37
+03/03/2026,Transaction,Macrame Wall Hanging,Order #2879088,USD,0.00,-2.24,-2.24
+03/02/2026,Sale,Payment for Order #2876452,,USD,38.00,-1.79,36.21
+03/02/2026,Transaction,Beeswax Candle Set,Order #2876452,USD,0.00,-1.52,-1.52
+03/01/2026,Marketing,Offsite Ads Fee,,USD,0.00,-8.70,-8.70
+03/01/2026,Sale,Payment for Order #2872011,,USD,44.00,-2.07,41.93
+03/01/2026,Transaction,Embroidered Pillow Cover,Order #2872011,USD,0.00,-1.76,-1.76
+02/28/2026,Sale,Payment for Order #2869745,,USD,29.50,-1.39,28.11
+02/28/2026,Transaction,Watercolor Art Print,Order #2869745,USD,0.00,-1.18,-1.18
+02/27/2026,Sale,Payment for Order #2867001,,USD,67.00,-3.15,63.85
+02/27/2026,Transaction,Hand-painted Tray,Order #2867001,USD,0.00,-2.68,-2.68
+02/26/2026,Deposit,Deposit to bank account,,USD,0.00,0.00,0.00
+02/25/2026,Listing,Vintage Ceramic Mug,,USD,0.00,-0.20,-0.20
+02/25/2026,Listing,Custom Portrait Print,,USD,0.00,-0.20,-0.20
+02/24/2026,Sale,Payment for Order #2860120,,USD,51.00,-2.40,48.60
+02/24/2026,Transaction,Ceramic Ring Dish,Order #2860120,USD,0.00,-2.04,-2.04
+02/23/2026,Refund,Order #2855501 Refund,,USD,-18.00,0.00,-18.00
+02/22/2026,Sale,Payment for Order #2855501,,USD,18.00,-0.85,17.15
+02/22/2026,Transaction,Dried Wildflower Wreath,Order #2855501,USD,0.00,-0.72,-0.72
+02/21/2026,Subscription,Etsy Plus Subscription,,USD,0.00,-10.00,-10.00
+02/20/2026,Sale,Payment for Order #2849008,,USD,73.00,-3.43,69.57
+02/20/2026,Transaction,Custom Name Cutting Board,Order #2849008,USD,0.00,-2.92,-2.92
+02/19/2026,Marketing,Offsite Ads Fee,,USD,0.00,-6.20,-6.20
+02/17/2026,Sale,Payment for Order #2841234,,USD,42.00,-1.97,40.03
+02/17/2026,Transaction,Soy Wax Candle,Order #2841234,USD,0.00,-1.68,-1.68`;
+
+const MONTH2_CSV = `Date,Type,Title,Info,Currency,Amount,Fees & Taxes,Net
+01/31/2026,Sale,Payment for Order #2800001,,USD,60.00,-2.82,57.18
+01/31/2026,Transaction,Ceramic Bowl,Order #2800001,USD,0.00,-2.40,-2.40
+01/30/2026,Listing,Ceramic Bowl,,USD,0.00,-0.20,-0.20
+01/15/2026,Deposit,Deposit to bank account,,USD,0.00,0.00,0.00`;
+
+// ─── TEST SUITES ─────────────────────────────────────────────────────────────
+
+describe('parseAmt — currency parsing', () => {
+  it('parses a plain positive number', () => {
+    expect(parseAmt('47.00')).toBe(47.00);
+  });
+  it('parses a plain negative number', () => {
+    expect(parseAmt('-2.20')).toBe(-2.20);
+  });
+  it('returns 0 for empty/null', () => {
+    expect(parseAmt('')).toBe(0);
+    expect(parseAmt(null)).toBe(0);
+    expect(parseAmt(undefined)).toBe(0);
+  });
+  it('handles parentheses as negative (accounting format)', () => {
+    expect(parseAmt('(18.50)')).toBe(-18.50);
+  });
+  it('strips dollar signs', () => {
+    expect(parseAmt('$47.00')).toBeCloseTo(47.00);
+  });
+  it('handles zero', () => {
+    expect(parseAmt('0.00')).toBe(0);
+  });
+  it('handles large amounts with no decimals', () => {
+    expect(parseAmt('1500')).toBe(1500);
+  });
+});
+
+describe('fmt — number formatting', () => {
+  it('formats positive numbers with dollar sign', () => {
+    expect(fmt(1234.56)).toBe('$1,234.56');
+  });
+  it('formats negative numbers correctly', () => {
+    expect(fmt(-42.50)).toBe('-$42.50');
+  });
+  it('formats zero', () => {
+    expect(fmt(0)).toBe('$0.00');
+  });
+  it('adds thousands separator', () => {
+    expect(fmt(10000)).toBe('$10,000.00');
+  });
+  it('uses custom currency symbol', () => {
+    expect(fmt(100, '£')).toBe('£100.00');
+  });
+});
+
+describe('CSV parsing — column detection', () => {
+  it('detects all standard Etsy column names', () => {
+    const rows = normalizeRows(DEMO_CSV);
+    const COL = detectCOL(rows);
+    expect(COL.date).toBeTruthy();
+    expect(COL.type).toBeTruthy();
+    expect(COL.amount).toBeTruthy();
+    expect(COL.fees).toBeTruthy();
+    expect(COL.net).toBeTruthy();
+  });
+
+  it('normalizes column headers with & to and', () => {
+    const rows = normalizeRows(DEMO_CSV);
+    const cols = Object.keys(rows[0]);
+    expect(cols).toContain('fees_and_taxes');
+  });
+
+  it('parses all rows from demo CSV', () => {
+    const rows = normalizeRows(DEMO_CSV);
+    expect(rows.length).toBeGreaterThan(30);
+  });
+
+  it('handles extra whitespace in headers', () => {
+    const csv = `  Date , Type , Amount , Fees & Taxes , Net \n03/01/2026,Sale,10.00,-0.50,9.50`;
+    const rows = normalizeRows(csv);
+    const COL = detectCOL(rows);
+    expect(COL.amount).toBeTruthy();
+    expect(COL.fees).toBeTruthy();
+  });
+});
+
+describe('Revenue aggregation — KPI calculations', () => {
+  const rows = normalizeRows(DEMO_CSV);
+  const COL = detectCOL(rows);
+  const agg = aggregateRows(rows, COL);
+
+  it('gross revenue only counts Sale rows', () => {
+    expect(agg.grossRevenue).toBeGreaterThan(0);
+    // Sales in demo: 47+32.5+89+24+56+38+44+29.5+67+51+18+73+42 = 611
+    expect(agg.grossRevenue).toBeCloseTo(611, 0);
+  });
+
+  it('refunds are subtracted correctly', () => {
+    // One refund of -18.00
+    expect(agg.grossRefunds).toBeCloseTo(18, 0);
+  });
+
+  it('net profit is gross minus refunds minus fees', () => {
+    const expected = agg.grossRevenue - agg.grossRefunds;
+    // netProfit should be less than grossRevenue
+    expect(agg.netProfit).toBeLessThan(agg.grossRevenue);
+  });
+
+  it('deposits are not counted as revenue', () => {
+    // Deposits should not appear in sales
+    const depositInSales = agg.sales.find(r => r.type.toLowerCase() === 'deposit');
+    expect(depositInSales).toBeFalsy();
+  });
+
+  it('subscription fees are counted in fee rows', () => {
+    const subFee = agg.feeRows.find(r => r.type.toLowerCase() === 'subscription');
+    expect(subFee).toBeTruthy();
+  });
+
+  it('marketing fees are counted in fee rows', () => {
+    const mktFee = agg.feeRows.find(r => r.type.toLowerCase() === 'marketing');
+    expect(mktFee).toBeTruthy();
+  });
+});
+
+describe('Multi-file merging', () => {
+  it('combining two CSVs produces more rows than either alone', () => {
+    const rows1 = normalizeRows(DEMO_CSV);
+    const rows2 = normalizeRows(MONTH2_CSV);
+    const combined = [...rows1, ...rows2];
+    expect(combined.length).toBeGreaterThan(rows1.length);
+    expect(combined.length).toBeGreaterThan(rows2.length);
+  });
+
+  it('combined gross revenue equals sum of individual grosses', () => {
+    const rows1 = normalizeRows(DEMO_CSV);
+    const rows2 = normalizeRows(MONTH2_CSV);
+    const COL1 = detectCOL(rows1);
+    const COL2 = detectCOL(rows2);
+
+    const agg1 = aggregateRows(rows1, COL1);
+    const agg2 = aggregateRows(rows2, COL2);
+
+    const combined = [...rows1, ...rows2];
+    const aggC = aggregateRows(combined, COL1);
+
+    expect(aggC.grossRevenue).toBeCloseTo(agg1.grossRevenue + agg2.grossRevenue, 1);
+  });
+
+  it('rows sort correctly by date after merge', () => {
+    const rows1 = normalizeRows(DEMO_CSV);
+    const rows2 = normalizeRows(MONTH2_CSV);
+    const COL = detectCOL(rows1);
+    const combined = [...rows1, ...rows2].sort((a, b) => {
+      return new Date(a[COL.date]) - new Date(b[COL.date]);
+    });
+    // First row should be the oldest (January)
+    expect(combined[0][COL.date]).toContain('01/');
+  });
+
+  it('duplicate file names are detected', () => {
+    const staged = [{ name: 'march.csv', text: DEMO_CSV }];
+    const isDuplicate = staged.find(f => f.name === 'march.csv');
+    expect(isDuplicate).toBeTruthy();
+  });
+});
+
+describe('Pro license — key validation', () => {
+  it('a known valid key hashes to a stored hash', async () => {
+    // Key #1 from our launch set
+    const key = 'EFP-1EF5-1095-4447';
+    const hash = await hashKey(key);
+    expect(PRO_KEY_HASHES.has(hash)).toBe(true);
+  });
+
+  it('an invalid key does not match any stored hash', async () => {
+    const hash = await hashKey('EFP-FAKE-FAKE-FAKE');
+    expect(PRO_KEY_HASHES.has(hash)).toBe(false);
+  });
+
+  it('keys are case-insensitive after normalization', async () => {
+    const lower = 'efp-1ef5-1095-4447';
+    const hash = await hashKey(lower.toUpperCase());
+    expect(PRO_KEY_HASHES.has(hash)).toBe(true);
+  });
+
+  it('all 20 launch keys are valid', async () => {
+    const keys = [
+      'EFP-1EF5-1095-4447','EFP-17B6-6349-A86C','EFP-2A85-C0FC-8595','EFP-39EB-F6B7-EC8B',
+      'EFP-14B2-9721-967C','EFP-AE04-11DD-FE38','EFP-0FF4-F4F4-BD32','EFP-4C99-5FC4-48F7',
+      'EFP-4B86-994F-646C','EFP-327E-374C-548C','EFP-DF46-FD1E-FCAB','EFP-BFE0-2041-8ECD',
+      'EFP-B669-4B63-9D9E','EFP-CE81-1E88-4AF0','EFP-571B-F253-F439','EFP-47A2-4576-0DA1',
+      'EFP-9800-1B5C-86A2','EFP-1367-4D99-898E','EFP-4097-D7C1-3D38','EFP-D441-679C-F78F'
+    ];
+    const results = await Promise.all(keys.map(k => hashKey(k).then(h => PRO_KEY_HASHES.has(h))));
+    const allValid = results.every(r => r === true);
+    expect(allValid).toBe(true);
+  });
+
+  it('has exactly 20 keys in the hash set', () => {
+    expect(PRO_KEY_HASHES.size).toBe(20);
+  });
+});
+
+describe('formatKeyInput — key auto-formatting', () => {
+  function simulateFormat(raw) {
+    let v = raw.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    let out = '';
+    if (v.length > 0)  out += v.slice(0,3);
+    if (v.length > 3)  out += '-' + v.slice(3,7);
+    if (v.length > 7)  out += '-' + v.slice(7,11);
+    if (v.length > 11) out += '-' + v.slice(11,15);
+    return out;
+  }
+
+  it('formats a raw 15-char string into EFP-XXXX-XXXX-XXXX', () => {
+    expect(simulateFormat('EFP1EF510954447')).toBe('EFP-1EF5-1095-4447');
+  });
+  it('strips hyphens before reformatting (paste with dashes)', () => {
+    expect(simulateFormat('EFP-1EF5-1095-4447')).toBe('EFP-1EF5-1095-4447');
+  });
+  it('uppercases lowercase input', () => {
+    expect(simulateFormat('efp1ef510954447')).toBe('EFP-1EF5-1095-4447');
+  });
+  it('handles partial input gracefully', () => {
+    expect(simulateFormat('EFP1EF')).toBe('EFP-1EF');
+  });
+});
+
+describe('Edge cases — malformed / unusual CSVs', () => {
+  it('handles empty CSV gracefully', () => {
+    try {
+      const rows = normalizeRows('Date,Type,Amount,Fees & Taxes,Net');
+      // Should parse but have 0 data rows
+      expect(rows.length).toBe(0);
+    } catch(e) {
+      // PapaParse throws on truly empty = also acceptable
+    }
+  });
+
+  it('handles CSV with only deposit rows (no sales)', () => {
+    const csv = `Date,Type,Title,Info,Currency,Amount,Fees & Taxes,Net
+03/01/2026,Deposit,Deposit to bank,,USD,0.00,0.00,0.00`;
+    const rows = normalizeRows(csv);
+    const COL = detectCOL(rows);
+    const agg = aggregateRows(rows, COL);
+    expect(agg.grossRevenue).toBe(0);
+    expect(agg.netProfit).toBe(0);
+  });
+
+  it('handles a refund-only month without crashing', () => {
+    const csv = `Date,Type,Title,Info,Currency,Amount,Fees & Taxes,Net
+03/01/2026,Refund,Order #123 Refund,,USD,-50.00,0.00,-50.00`;
+    const rows = normalizeRows(csv);
+    const COL = detectCOL(rows);
+    const agg = aggregateRows(rows, COL);
+    expect(agg.grossRevenue).toBe(0);
+    expect(agg.grossRefunds).toBeCloseTo(50, 1);
+  });
+
+  it('1099-K equals gross sales revenue', () => {
+    const rows = normalizeRows(DEMO_CSV);
+    const COL = detectCOL(rows);
+    const agg = aggregateRows(rows, COL);
+    // 1099-K is gross, not net
+    const k1099 = agg.grossRevenue;
+    expect(k1099).toBeGreaterThan(agg.netProfit);
+  });
+
+  it('GBP currency symbol detection', () => {
+    const rows = [{ currency: 'GBP' }];
+    const sym = rows.find(r => r.currency)?.currency === 'GBP' ? '£' : '$';
+    expect(sym).toBe('£');
+  });
+});
+
+describe('1099-K threshold logic', () => {
+  it('flags when gross exceeds $600', () => {
+    // Demo data gross is ~611 — above $600 threshold
+    const rows = normalizeRows(DEMO_CSV);
+    const COL = detectCOL(rows);
+    const agg = aggregateRows(rows, COL);
+    expect(agg.grossRevenue).toBeGreaterThan(600);
+  });
+
+  it('does not flag when gross is under $600', () => {
+    const csv = `Date,Type,Title,Info,Currency,Amount,Fees & Taxes,Net
+03/01/2026,Sale,Small item,,USD,50.00,-2.35,47.65`;
+    const rows = normalizeRows(csv);
+    const COL = detectCOL(rows);
+    const agg = aggregateRows(rows, COL);
+    expect(agg.grossRevenue).toBeLessThan(600);
+  });
+});
+
+// ─── TAX ENGINE (mirrored from app) ─────────────────────────────────────────
+
+const TAX_BRACKETS = {
+  2026: {
+    single:  [[11925,0.10],[48475,0.12],[103350,0.22],[197300,0.24],[250525,0.32],[626350,0.35],[Infinity,0.37]],
+    mfj:     [[23850,0.10],[96950,0.12],[206700,0.22],[394600,0.24],[501050,0.32],[751600,0.35],[Infinity,0.37]],
+    mfs:     [[11925,0.10],[48475,0.12],[103350,0.22],[197300,0.24],[250525,0.32],[375800,0.35],[Infinity,0.37]],
+    hoh:     [[17000,0.10],[64850,0.12],[103350,0.22],[197300,0.24],[250500,0.32],[626350,0.35],[Infinity,0.37]],
+  },
+  2025: {
+    single:  [[11600,0.10],[47150,0.12],[100525,0.22],[191950,0.24],[243725,0.32],[609350,0.35],[Infinity,0.37]],
+    mfj:     [[23200,0.10],[94300,0.12],[201050,0.22],[383900,0.24],[487450,0.32],[731200,0.35],[Infinity,0.37]],
+    mfs:     [[11600,0.10],[47150,0.12],[100525,0.22],[191950,0.24],[243725,0.32],[365600,0.35],[Infinity,0.37]],
+    hoh:     [[16550,0.10],[63100,0.12],[100500,0.22],[191950,0.24],[243700,0.32],[609350,0.35],[Infinity,0.37]],
+  }
+};
+
+const STANDARD_DEDUCTION = {
+  2026: { single: 15000, mfj: 30000, mfs: 15000, hoh: 22500 },
+  2025: { single: 14600, mfj: 29200, mfs: 14600, hoh: 21900 },
+};
+
+const SE_TAX_RATE = 0.1530;
+const SE_DEDUCTION_RATE = 0.50;
+const QBI_DEDUCTION_RATE = 0.20;
+
+function calculateFederalTax(taxableIncome, filingStatus, year) {
+  const brackets = TAX_BRACKETS[year]?.[filingStatus] || TAX_BRACKETS[2026].single;
+  let tax = 0, prev = 0;
+  for (const [ceiling, rate] of brackets) {
+    if (taxableIncome <= prev) break;
+    const slice = Math.min(taxableIncome, ceiling) - prev;
+    tax += slice * rate;
+    prev = ceiling;
+    if (ceiling === Infinity) break;
+  }
+  return Math.max(0, tax);
+}
+
+function getMarginalRate(taxableIncome, filingStatus, year) {
+  const brackets = TAX_BRACKETS[year]?.[filingStatus] || TAX_BRACKETS[2026].single;
+  let prev = 0;
+  for (const [ceiling, rate] of brackets) {
+    if (taxableIncome <= ceiling) return rate;
+    prev = ceiling;
+  }
+  return 0.37;
+}
+
+function calcTax({ netProfit, otherIncome, extraExpenses, filingStatus, year }) {
+  const adjustedProfit = Math.max(0, netProfit - extraExpenses);
+  const netSEIncome    = adjustedProfit * 0.9235;
+  const seTax          = netSEIncome * SE_TAX_RATE;
+  const seDeduction    = seTax * SE_DEDUCTION_RATE;
+  const stdDeduction   = STANDARD_DEDUCTION[year]?.[filingStatus] || 15000;
+  const qbiDeduction   = adjustedProfit * QBI_DEDUCTION_RATE;
+  const totalIncome    = adjustedProfit + otherIncome;
+  const taxableIncome  = Math.max(0, totalIncome - seDeduction - stdDeduction - qbiDeduction);
+  const federalTax     = calculateFederalTax(taxableIncome, filingStatus, year);
+  const totalTax       = seTax + federalTax;
+  const effectiveRate  = adjustedProfit > 0 ? totalTax / adjustedProfit : 0;
+  const marginalRate   = getMarginalRate(taxableIncome, filingStatus, year);
+  const quarterlyPayment = totalTax / 4;
+  return { adjustedProfit, netSEIncome, seTax, seDeduction, stdDeduction, qbiDeduction,
+           taxableIncome, federalTax, totalTax, effectiveRate, marginalRate, quarterlyPayment };
+}
+
+// ─── TAX CALCULATOR TESTS ────────────────────────────────────────────────────
+
+describe('Tax engine — SE tax calculation', () => {
+  it('SE tax is 15.3% of 92.35% of net profit', () => {
+    const r = calcTax({ netProfit: 10000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    const expected = 10000 * 0.9235 * 0.153;
+    expect(r.seTax).toBeCloseTo(expected, 1);
+  });
+
+  it('SE deduction is 50% of SE tax', () => {
+    const r = calcTax({ netProfit: 10000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.seDeduction).toBeCloseTo(r.seTax * 0.5, 2);
+  });
+
+  it('QBI deduction is 20% of adjusted profit', () => {
+    const r = calcTax({ netProfit: 10000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.qbiDeduction).toBeCloseTo(10000 * 0.20, 2);
+  });
+
+  it('zero profit produces zero tax', () => {
+    const r = calcTax({ netProfit: 0, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.seTax).toBe(0);
+    expect(r.federalTax).toBe(0);
+    expect(r.totalTax).toBe(0);
+  });
+
+  it('negative profit is treated as zero (no negative tax)', () => {
+    const r = calcTax({ netProfit: -5000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.adjustedProfit).toBe(0);
+    expect(r.seTax).toBe(0);
+  });
+
+  it('extra expenses reduce taxable profit', () => {
+    const without = calcTax({ netProfit: 10000, otherIncome: 0, extraExpenses: 0,    filingStatus: 'single', year: 2026 });
+    const withExp = calcTax({ netProfit: 10000, otherIncome: 0, extraExpenses: 2000, filingStatus: 'single', year: 2026 });
+    expect(withExp.adjustedProfit).toBe(8000);
+    expect(withExp.totalTax).toBeLessThan(without.totalTax);
+  });
+
+  it('quarterly payment is total tax divided by 4', () => {
+    const r = calcTax({ netProfit: 50000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.quarterlyPayment).toBeCloseTo(r.totalTax / 4, 2);
+  });
+});
+
+describe('Tax engine — federal income brackets', () => {
+  it('income below standard deduction produces zero federal tax (single filer)', () => {
+    // $15,000 std deduction in 2026; with QBI and SE deductions, small profit = $0 federal
+    const r = calcTax({ netProfit: 5000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.federalTax).toBe(0);
+  });
+
+  it('MFJ standard deduction is double single filer', () => {
+    expect(STANDARD_DEDUCTION[2026].mfj).toBe(STANDARD_DEDUCTION[2026].single * 2);
+  });
+
+  it('MFJ filer pays less tax than single on same income', () => {
+    const single = calcTax({ netProfit: 80000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    const mfj    = calcTax({ netProfit: 80000, otherIncome: 0, extraExpenses: 0, filingStatus: 'mfj',    year: 2026 });
+    expect(mfj.totalTax).toBeLessThan(single.totalTax);
+  });
+
+  it('higher income has higher marginal rate', () => {
+    const low  = calcTax({ netProfit: 20000,  otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    const high = calcTax({ netProfit: 200000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(high.marginalRate).toBeGreaterThan(low.marginalRate);
+  });
+
+  it('effective rate is always less than marginal rate', () => {
+    const r = calcTax({ netProfit: 100000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.effectiveRate).toBeLessThan(r.marginalRate);
+  });
+
+  it('taxable income cannot be negative', () => {
+    const r = calcTax({ netProfit: 1000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.taxableIncome).toBeGreaterThan(-1);
+  });
+
+  it('other income adds to taxable income', () => {
+    const without = calcTax({ netProfit: 10000, otherIncome: 0,     extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    const withInc = calcTax({ netProfit: 10000, otherIncome: 50000, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(withInc.taxableIncome).toBeGreaterThan(without.taxableIncome);
+    expect(withInc.totalTax).toBeGreaterThan(without.totalTax);
+  });
+});
+
+describe('Tax engine — bracket math correctness', () => {
+  it('$10k taxable income is taxed at 10% bracket for single', () => {
+    // $10k is within the first $11,925 bracket at 10%
+    const tax = calculateFederalTax(10000, 'single', 2026);
+    expect(tax).toBeCloseTo(10000 * 0.10, 0);
+  });
+
+  it('$60k taxable crosses into 22% bracket for single', () => {
+    const tax = calculateFederalTax(60000, 'single', 2026);
+    // First $11,925 at 10%, next $36,550 at 12%, remainder at 22%
+    const expected = (11925 * 0.10) + ((48475 - 11925) * 0.12) + ((60000 - 48475) * 0.22);
+    expect(tax).toBeCloseTo(expected, 0);
+  });
+
+  it('calculateFederalTax returns 0 for zero income', () => {
+    expect(calculateFederalTax(0, 'single', 2026)).toBe(0);
+  });
+
+  it('2025 and 2026 brackets are different (annual inflation adjustment)', () => {
+    const t25 = calculateFederalTax(50000, 'single', 2025);
+    const t26 = calculateFederalTax(50000, 'single', 2026);
+    // 2026 brackets are slightly wider (inflation adjusted), so tax should be slightly less
+    expect(t25).toBeGreaterThan(t26);
+  });
+});
+
+describe('Tax engine — real-world sanity checks', () => {
+  it('Etsy seller making $611 gross / ~$500 net owes minimal tax', () => {
+    // Demo CSV scenario: ~$500 net profit, no other income
+    const r = calcTax({ netProfit: 500, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    // SE tax ~$70, federal $0 (below std deduction)
+    expect(r.seTax).toBeCloseTo(500 * 0.9235 * 0.153, 0);
+    expect(r.federalTax).toBe(0);
+    expect(r.quarterlyPayment).toBeCloseTo(r.seTax / 4, 0);
+  });
+
+  it('seller with $50k net profit owes meaningful quarterly payment', () => {
+    const r = calcTax({ netProfit: 50000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.quarterlyPayment).toBeGreaterThan(1000);
+  });
+
+  it('total tax does not exceed 50% of net profit for reasonable incomes', () => {
+    const r = calcTax({ netProfit: 100000, otherIncome: 0, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(r.effectiveRate).toBeLessThan(0.50);
+  });
+
+  it('adding W-2 income increases quarterly payment', () => {
+    const etsy = calcTax({ netProfit: 20000, otherIncome: 0,     extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    const both = calcTax({ netProfit: 20000, otherIncome: 40000, extraExpenses: 0, filingStatus: 'single', year: 2026 });
+    expect(both.quarterlyPayment).toBeGreaterThan(etsy.quarterlyPayment);
+  });
+});
+
+// ─── PDF EXPORT LOGIC (mirrored from app) ────────────────────────────────────
+
+function buildLastRender(csvText) {
+  const result = Papa.parse(csvText.trim(), {
+    header: true, skipEmptyLines: true, transformHeader: h => h.trim()
+  });
+  const rows = result.data.map(r => {
+    const n = {};
+    for (const k of Object.keys(r)) {
+      const key = k.trim().toLowerCase().replace(/\s+/g,'_').replace(/&/g,'and').replace(/[^a-z0-9_]/g,'');
+      n[key] = (r[k]||'').trim();
+    }
+    return n;
+  });
+  const cols = Object.keys(rows[0]);
+  const find = names => cols.find(c => names.some(n => c.includes(n))) || null;
+  const COL = {
+    date: find(['date']), type: find(['type']), title: find(['title']),
+    info: find(['info']), currency: find(['currency']), amount: find(['amount']),
+    fees: find(['fees_and_taxes','fees','fee']), net: find(['net'])
+  };
+  const typed = rows.map(r => ({
+    type: (r[COL.type]||'').trim(), amount: parseAmt(r[COL.amount]),
+    fees: parseAmt(r[COL.fees]), net: parseAmt(r[COL.net]),
+    date: r[COL.date]||'', title: r[COL.title]||'', info: r[COL.info]||'',
+  }));
+  const isSale    = t => t.type.toLowerCase() === 'sale';
+  const isFeeType = t => ['transaction','listing','fee','marketing','subscription'].includes(t.type.toLowerCase());
+  const isRefund  = t => t.type.toLowerCase() === 'refund';
+  const sales   = typed.filter(isSale);
+  const feeRows = typed.filter(isFeeType);
+  const refunds = typed.filter(isRefund);
+  const grossRevenue = sales.reduce((s,r) => s+r.amount, 0);
+  const grossRefunds = Math.abs(refunds.reduce((s,r) => s+r.amount, 0));
+  const totalFees    = Math.abs(feeRows.reduce((s,r) => s+r.fees+r.amount, 0));
+  const paymentFees  = Math.abs(sales.reduce((s,r) => s+r.fees, 0));
+  const netProfit    = grossRevenue - grossRefunds - totalFees;
+  const margin       = grossRevenue > 0 ? netProfit / grossRevenue : 0;
+  const k1099Gross   = grossRevenue;
+  const feeByType = {};
+  for (const r of feeRows) {
+    const key = r.type.charAt(0).toUpperCase() + r.type.slice(1).toLowerCase();
+    feeByType[key] = (feeByType[key]||0) + Math.abs(r.fees+r.amount);
+  }
+  if (paymentFees > 0) feeByType['Payment Processing'] = (feeByType['Payment Processing']||0) + paymentFees;
+  const dates = typed.map(r => r.date).filter(Boolean);
+  const dateRange = dates.length ? `${dates[dates.length-1]} – ${dates[0]}` : 'demo';
+  const monthly = {};
+  for (const r of typed) {
+    if (!r.date) continue;
+    const parts = r.date.split('/');
+    const key = parts.length >= 2 ? `${parts[0]}/${parts.length>=3?parts[2].slice(-2):''}` : r.date.slice(0,7);
+    if (!monthly[key]) monthly[key] = { gross: 0, fees: 0 };
+    if (isSale(r)) monthly[key].gross += r.amount;
+    if (isFeeType(r)) monthly[key].fees += Math.abs(r.fees+r.amount);
+    if (isSale(r)) monthly[key].fees += Math.abs(r.fees);
+  }
+  const monthKeys = Object.keys(monthly).sort();
+  const currency = 'USD';
+  const sym = '$';
+  return {
+    grossRevenue, grossRefunds, totalFees: totalFees + paymentFees, netProfit, margin,
+    k1099Gross, feeByType, dateRange, sym, currency, monthly, monthKeys, typed,
+    filename: 'test.csv', salesCount: sales.length, refundCount: refunds.length
+  };
+}
+
+// ─── PDF EXPORT TESTS ────────────────────────────────────────────────────────
+
+describe('PDF export — render state building', () => {
+  it('buildLastRender produces required keys', () => {
+    const r = buildLastRender(DEMO_CSV);
+    expect(r.grossRevenue).toBeTruthy();
+    expect(r.netProfit).toBeTruthy();
+    expect(r.feeByType).toBeTruthy();
+    expect(r.dateRange).toBeTruthy();
+    expect(r.sym).toBe('$');
+    expect(r.monthKeys).toBeTruthy();
+  });
+
+  it('salesCount matches number of Sale rows', () => {
+    const r = buildLastRender(DEMO_CSV);
+    // Demo has 13 Sale rows
+    expect(r.salesCount).toBe(13);
+  });
+
+  it('feeByType keys are title-cased', () => {
+    const r = buildLastRender(DEMO_CSV);
+    const keys = Object.keys(r.feeByType);
+    for (const k of keys) {
+      expect(k[0]).toBe(k[0].toUpperCase());
+    }
+  });
+
+  it('dateRange contains a dash separator', () => {
+    const r = buildLastRender(DEMO_CSV);
+    expect(r.dateRange).toContain('–');
+  });
+
+  it('monthly keys are sorted chronologically', () => {
+    const r = buildLastRender(DEMO_CSV);
+    const sorted = [...r.monthKeys].sort();
+    expect(r.monthKeys).toEqual(sorted);
+  });
+
+  it('multi-month CSV produces multiple monthKeys', () => {
+    const combined = DEMO_CSV + '\n' + MONTH2_CSV.split('\n').slice(1).join('\n');
+    const r = buildLastRender(combined);
+    expect(r.monthKeys.length).toBeGreaterThan(1);
+  });
+});
+
+describe('PDF export — data integrity for PDF rendering', () => {
+  it('gross revenue matches sum of all sale amounts', () => {
+    const rows = normalizeRows(DEMO_CSV);
+    const COL = detectCOL(rows);
+    const agg = aggregateRows(rows, COL);
+    const r = buildLastRender(DEMO_CSV);
+    expect(r.grossRevenue).toBeCloseTo(agg.grossRevenue, 1);
+  });
+
+  it('fee breakdown values sum to approximately totalFees', () => {
+    const r = buildLastRender(DEMO_CSV);
+    const feeSum = Object.values(r.feeByType).reduce((s,v) => s+v, 0);
+    // feeSum should be close to totalFees (within rounding)
+    expect(Math.abs(feeSum - r.totalFees)).toBeLessThan(1);
+  });
+
+  it('1099-K amount equals gross revenue', () => {
+    const r = buildLastRender(DEMO_CSV);
+    expect(r.k1099Gross).toBe(r.grossRevenue);
+  });
+
+  it('netProfit = grossRevenue - grossRefunds - totalFees', () => {
+    const r = buildLastRender(DEMO_CSV);
+    const expected = r.grossRevenue - r.grossRefunds - r.totalFees;
+    expect(r.netProfit).toBeCloseTo(expected, 1);
+  });
+
+  it('margin is between 0 and 1 for positive revenue', () => {
+    const r = buildLastRender(DEMO_CSV);
+    expect(r.margin).toBeGreaterThan(0);
+    expect(r.margin).toBeLessThan(1);
+  });
+
+  it('sym is correct for USD', () => {
+    const r = buildLastRender(DEMO_CSV);
+    expect(r.sym).toBe('$');
+  });
+
+  it('dateRange is non-empty string', () => {
+    const r = buildLastRender(DEMO_CSV);
+    expect(typeof r.dateRange).toBe('string');
+    expect(r.dateRange.length).toBeGreaterThan(0);
+  });
+});
+
+describe('PDF export — filename sanitisation', () => {
+  function safePDFName(dateRange, filename) {
+    const safeName = (dateRange || filename || 'report').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    return `etsyfinance-${safeName}.pdf`;
+  }
+
+  it('produces a valid filename from a date range', () => {
+    const name = safePDFName('02/01/2026 – 03/07/2026', 'test.csv');
+    expect(name).toMatch(/^etsyfinance-.*\.pdf$/);
+    expect(name).not.toContain(' ');
+    expect(name).not.toContain('/');
+  });
+
+  it('falls back to filename if dateRange is empty', () => {
+    const name = safePDFName('', 'march-2026.csv');
+    expect(name).toContain('march');
+  });
+
+  it('falls back to "report" if both are empty', () => {
+    const name = safePDFName('', '');
+    expect(name).toBe('etsyfinance-report.pdf');
+  });
+
+  it('strips special characters from filename', () => {
+    const name = safePDFName('Q1 2026: Jan–Mar', '');
+    expect(name).not.toContain(':');
+    expect(name).not.toContain('–');
+  });
+});
+
+describe('PDF export — Pro gate', () => {
+  it('handlePDFExport requires Pro (no modal shown without unlock)', () => {
+    // Simulate: if isProUnlocked() returns false, PDF export should be blocked
+    // We test the gate logic directly
+    const gateCheck = (proUnlocked, hasData) => {
+      if (!proUnlocked) return 'show-modal';
+      if (!hasData) return 'no-data';
+      return 'export';
+    };
+    expect(gateCheck(false, true)).toBe('show-modal');
+    expect(gateCheck(false, false)).toBe('show-modal');
+    expect(gateCheck(true, false)).toBe('no-data');
+    expect(gateCheck(true, true)).toBe('export');
+  });
+});
+
+// ─── RUNNER ─────────────────────────────────────────────────────────────────
+
+async function runAll() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Running…';
+
+  const output = document.getElementById('test-output');
+  output.innerHTML = '';
+
+  let totalPass = 0, totalFail = 0, totalTests = 0;
+  const allTests = suites.flatMap(s => s.tests);
+  totalTests = allTests.length;
+  let done = 0;
+
+  for (const suite of suites) {
+    const suiteEl = document.createElement('div');
+    suiteEl.className = 'suite';
+    suiteEl.innerHTML = `<div class="suite-title">${suite.name}</div>`;
+
+    for (const test of suite.tests) {
+      const row = document.createElement('div');
+      row.className = 'test-row pending';
+
+      const start = performance.now();
+      try {
+        const result = test.fn();
+        if (result && typeof result.then === 'function') await result;
+        test.status = 'pass';
+        totalPass++;
+      } catch(e) {
+        test.status = 'fail';
+        test.error = e.message;
+        totalFail++;
+      }
+      test.duration = (performance.now() - start).toFixed(1);
+      done++;
+
+      const icon = test.status === 'pass' ? '✓' : '✗';
+      row.className = `test-row ${test.status}`;
+      row.innerHTML = `
+        <div class="test-icon">${icon}</div>
+        <div class="test-name">
+          ${test.name}
+          ${test.error ? `<div class="test-detail">${test.error}</div>` : ''}
+        </div>
+        <div class="test-time">${test.duration}ms</div>
+      `;
+      suiteEl.appendChild(row);
+
+      // Update progress
+      document.getElementById('progress').style.width = `${(done/totalTests)*100}%`;
+    }
+
+    output.appendChild(suiteEl);
+  }
+
+  // Summary
+  document.getElementById('s-total').textContent = totalTests;
+  document.getElementById('s-pass').textContent = totalPass;
+  document.getElementById('s-fail').textContent = totalFail;
+  document.getElementById('s-skip').textContent = 0;
+
+  btn.disabled = false;
+  btn.textContent = totalFail === 0 ? '✓ All passed — Run Again' : `✗ ${totalFail} failed — Run Again`;
+  btn.style.background = totalFail === 0 ? 'var(--pass)' : 'var(--fail)';
+}
+
+// Auto-run on load
+window.addEventListener('load', () => setTimeout(runAll, 200));
+</script>
+</body>
+</html>

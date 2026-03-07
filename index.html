@@ -5,6 +5,127 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EtsyFinance — Know Your Real Profit</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+
+// ─── PRO LICENSE SYSTEM ───────────────────────────────────────────────────────
+// Validation hashes of the 20 launch keys (sha256(key + salt).slice(0,16))
+const PRO_KEY_HASHES = new Set([
+  "6090c78674d414d1","ed685c284a31a1ee","472222af57c6e812","81ec574f1cb3dfeb",
+  "a6b7872c651869b6","35b686e54bbd7e96","a6e64acb19077e45","e05c2244ddb7f1da",
+  "37330fb03c2fd7e3","ea669a13ef8aef4e","95c40cf9bc0a4931","d815c2e1ff6db230",
+  "2031fc6f66cce99a","6b218dbf226ae7b2","a857e9c39d291fed","33230f5f7282d3ee",
+  "58b3fc3ee4d576cd","7928a23c1ecc5d66","b59af2d950eae480","a8482e16173b9525"
+]);
+
+const PRO_SALT = 'etsyfinance_pro_2026';
+const PRO_STORAGE_KEY = 'efp_license';
+
+// Check if user already has a valid Pro key stored
+function isProUnlocked() {
+  try {
+    const stored = localStorage.getItem(PRO_STORAGE_KEY);
+    if (!stored) return false;
+    return PRO_KEY_HASHES.has(stored);
+  } catch(e) { return false; }
+}
+
+async function hashKey(key) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(key + PRO_SALT);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('').slice(0,16);
+}
+
+async function submitLicenseKey() {
+  const input = document.getElementById('pro-key-input');
+  const errorEl = document.getElementById('pro-key-error');
+  const key = input.value.trim().toUpperCase();
+
+  if (!key) { errorEl.textContent = 'Please enter your license key.'; return; }
+
+  const hash = await hashKey(key);
+
+  if (PRO_KEY_HASHES.has(hash)) {
+    // Valid key — store hash (not the key itself) and unlock
+    try { localStorage.setItem(PRO_STORAGE_KEY, hash); } catch(e) {}
+    input.classList.remove('error');
+    input.classList.add('success');
+    errorEl.style.color = 'var(--green)';
+    errorEl.textContent = '✓ Pro unlocked! Processing your files…';
+    setTimeout(() => {
+      closeProModal();
+      processAllFiles(); // resume the blocked upload
+    }, 900);
+  } else {
+    input.classList.add('error');
+    input.classList.remove('success');
+    errorEl.textContent = 'Invalid key. Check for typos or contact hello@etsyfinance.com.';
+    setTimeout(() => input.classList.remove('error'), 400);
+  }
+}
+
+function formatKeyInput(input) {
+  // Auto-format as EFP-XXXX-XXXX-XXXX
+  let v = input.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+  let out = '';
+  if (v.length > 0) out += v.slice(0,3);
+  if (v.length > 3) out += '-' + v.slice(3,7);
+  if (v.length > 7) out += '-' + v.slice(7,11);
+  if (v.length > 11) out += '-' + v.slice(11,15);
+  input.value = out;
+  document.getElementById('pro-key-error').textContent = '';
+  input.classList.remove('error','success');
+}
+
+function showProModal() {
+  document.getElementById('pro-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pro-key-input').focus(), 300);
+}
+
+function closeProModal() {
+  document.getElementById('pro-modal').style.display = 'none';
+  // If they close without unlocking and only have 1 file staged, keep it
+  if (stagedFiles.length > 1) {
+    // Trim to just the first file
+    stagedFiles = [stagedFiles[0]];
+    renderFilePills();
+    processAllFiles();
+  }
+}
+
+// Allow Escape key to close modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('pro-modal').style.display !== 'none') {
+    closeProModal();
+  }
+});
+
+// Close on overlay click (not modal itself)
+document.getElementById('pro-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('pro-modal')) closeProModal();
+});
+
+// Show pro status in UI if already unlocked on load
+window.addEventListener('load', () => {
+  if (isProUnlocked()) {
+    showProStatus();
+  }
+});
+
+function showProStatus() {
+  // Hide the "Unlock Pro" bar, show a green pro badge instead
+  const bar = document.getElementById('pro-unlock-bar');
+  if (bar) {
+    bar.innerHTML = '✦ Pro unlocked — drop multiple CSVs to combine months';
+    bar.style.cssText += 'cursor:default;background:var(--green-pale);border-color:rgba(26,122,74,0.25);color:var(--green);';
+    bar.onclick = null;
+  }
+}
+
+
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -878,6 +999,65 @@
     overflow: hidden;
   }
 
+  /* ─── FILE PILLS ─── */
+  .file-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .file-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(241,100,30,0.15);
+    border: 1px solid rgba(241,100,30,0.3);
+    border-radius: 20px;
+    padding: 5px 12px 5px 10px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    font-family: 'DM Mono', monospace;
+    animation: pillIn 0.2s ease;
+  }
+
+  @keyframes pillIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .file-pill-icon { font-size: 13px; }
+
+  .file-pill-remove {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 0 0 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+
+  .file-pill-remove:hover { color: var(--etsy); }
+
+  .multi-month-banner {
+    background: var(--gold-pale);
+    border: 1px solid #e8c870;
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 28px;
+    font-size: 13.5px;
+    color: var(--ink-mid);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .multi-month-banner strong { color: var(--ink); }
+
   /* ─── SIGNUP BOX ─── */
   .signup-box {
     background: rgba(255,255,255,0.06);
@@ -967,6 +1147,469 @@
   }
 
   .footer a { color: var(--etsy); text-decoration: none; }
+
+  /* ─── PRO PAYWALL MODAL ─── */
+  .pro-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,22,18,0.7);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+  .pro-modal {
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 24px 80px rgba(26,22,18,0.25);
+    text-align: center;
+    position: relative;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp { from { transform:translateY(16px); opacity:0 } to { transform:translateY(0); opacity:1 } }
+
+  .pro-modal-close {
+    position: absolute;
+    top: 16px; right: 20px;
+    background: none; border: none;
+    font-size: 22px; color: var(--ink-light);
+    cursor: pointer; line-height: 1;
+  }
+
+  .pro-modal-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--etsy), #ff8c5a);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .pro-modal h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    color: var(--ink);
+    margin-bottom: 12px;
+    line-height: 1.2;
+  }
+
+  .pro-modal p {
+    font-size: 15px;
+    color: var(--ink-mid);
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  .pro-modal-features {
+    background: var(--cream);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    text-align: left;
+  }
+
+  .pro-modal-features li {
+    list-style: none;
+    font-size: 14px;
+    color: var(--ink-mid);
+    padding: 5px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pro-modal-features li span { font-size: 16px; }
+
+  .pro-modal-divider {
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-light);
+    margin: 16px 0;
+    position: relative;
+  }
+
+  .pro-modal-divider::before, .pro-modal-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%; width: 42%; height: 1px;
+    background: var(--border);
+  }
+
+  .pro-modal-divider::before { left: 0; }
+  .pro-modal-divider::after { right: 0; }
+
+  .pro-key-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .pro-key-input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    color: var(--ink);
+    background: white;
+    transition: border-color 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .pro-key-input:focus { outline: none; border-color: var(--etsy); }
+  .pro-key-input.error { border-color: var(--red); animation: shake 0.3s ease; }
+  .pro-key-input.success { border-color: var(--green); }
+
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-6px)}
+    60%{transform:translateX(6px)}
+  }
+
+  .pro-key-submit {
+    padding: 12px 18px;
+    background: var(--etsy);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .pro-key-submit:hover { background: var(--etsy-dark); }
+
+  .pro-key-error {
+    font-size: 12.5px;
+    color: var(--red);
+    min-height: 18px;
+    text-align: left;
+  }
+
+  .pro-cta-btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--etsy), #ff8c5a);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 10px;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity 0.2s;
+    text-decoration: none;
+  }
+
+  .pro-cta-btn:hover { opacity: 0.9; }
+
+  .pro-modal-footer {
+    font-size: 12px;
+    color: var(--ink-light);
+    margin-top: 6px;
+  }
+
+  /* Pro badge on upload zone */
+  .pro-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, var(--etsy), #ff8c5a);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .pro-unlock-bar {
+    background: linear-gradient(135deg, var(--etsy-pale), #fff0eb);
+    border: 1px solid rgba(241,100,30,0.25);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--ink-mid);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .pro-unlock-bar:hover { background: #ffe8dc; }
+  .pro-unlock-bar strong { color: var(--etsy); }
+
+
+
+  /* ─── TAX CALCULATOR ─── */
+  .tax-section {
+    margin-bottom: 40px;
+  }
+
+  .tax-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .tax-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tax-pro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, var(--etsy), #ff8c5a);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .tax-disclaimer {
+    font-size: 12px;
+    color: var(--ink-light);
+    font-style: italic;
+  }
+
+  .tax-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .tax-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .tax-input-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .tax-input-label span {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-light);
+  }
+
+  .tax-select, .tax-input {
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    background: white;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  .tax-select:focus, .tax-input:focus {
+    outline: none;
+    border-color: var(--etsy);
+  }
+
+  .tax-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .tax-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  .tax-card.highlight {
+    background: #fff8f5;
+    border-color: rgba(241,100,30,0.3);
+  }
+
+  .tax-card-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-light);
+    margin-bottom: 6px;
+  }
+
+  .tax-card-value {
+    font-size: 26px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+
+  .tax-card.highlight .tax-card-value {
+    color: var(--etsy);
+  }
+
+  .tax-card-sub {
+    font-size: 12px;
+    color: var(--ink-light);
+    margin-top: 4px;
+  }
+
+  .tax-breakdown {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 13px;
+  }
+
+  .tax-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-mid);
+  }
+
+  .tax-breakdown-row:last-child {
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--ink);
+    padding-top: 10px;
+    margin-top: 2px;
+  }
+
+  .tax-breakdown-row .tax-row-label { flex: 1; }
+
+  .tax-breakdown-row .tax-row-rate {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-light);
+    margin-right: 20px;
+  }
+
+  .tax-breakdown-row .tax-row-amount {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--ink);
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .tax-due-dates {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .tax-due-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12.5px;
+    color: var(--ink-mid);
+  }
+
+  .tax-due-pill.current {
+    border-color: var(--etsy);
+    background: var(--etsy-pale);
+    color: var(--etsy-dark);
+    font-weight: 600;
+  }
+
+  .tax-due-pill .due-date { font-family: 'DM Mono', monospace; font-size: 12px; }
+
+  .tax-pro-gate {
+    background: var(--paper);
+    border: 1.5px dashed var(--border);
+    border-radius: 14px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .tax-pro-gate:hover {
+    border-color: var(--etsy);
+    background: var(--etsy-pale);
+  }
+
+  .tax-pro-gate h4 {
+    font-size: 16px;
+    margin: 10px 0 6px;
+    color: var(--ink);
+  }
+
+  .tax-pro-gate p {
+    font-size: 13.5px;
+    color: var(--ink-mid);
+    margin-bottom: 14px;
+  }
+
+  .tax-pro-gate .unlock-link {
+    color: var(--etsy);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+  }
+
 </style>
 </head>
 <body>
@@ -984,15 +1627,19 @@
   <div class="hero-inner">
     <div class="hero-eyebrow">For Etsy Sellers</div>
     <h1>Finally know your<br><em>real profit.</em></h1>
-    <p>Upload your monthly Etsy Payments statement CSV and get an instant breakdown of gross revenue, every fee category, net profit, and your projected 1099-K amount — in seconds.</p>
+    <p>Upload your Etsy Payments statement CSV and get an instant breakdown of gross revenue, every fee category, net profit, and your projected 1099-K amount — in seconds.</p>
 
     <div class="upload-zone" id="dropZone">
-      <input type="file" id="csvInput" accept=".csv" />
-      <div class="upload-icon">📄</div>
-      <h3>Drop your Etsy Payments CSV here</h3>
-      <p>or click to browse files</p>
-      <div class="upload-cta">Choose CSV File</div>
+      <input type="file" id="csvInput" accept=".csv" multiple />
+      <div class="upload-icon">📂</div>
+      <h3>Drop one or more Etsy Payments CSVs here</h3>
+      <p>Upload your Etsy Payments CSV for an instant breakdown</p>
+      <div class="upload-cta">Choose CSV Files</div>
       <div class="upload-hint">Your data never leaves your browser — 100% private</div>
+      <div class="pro-unlock-bar" onclick="showProModal()" id="pro-unlock-bar">
+        <span>📊</span> <span>Want to combine multiple months? <strong>Unlock Pro →</strong></span>
+      </div>
+      <div id="file-pills" class="file-pills"></div>
     </div>
   </div>
 </section>
@@ -1001,14 +1648,15 @@
 <section class="email-capture">
   <div class="email-inner">
     <div class="email-left">
-      <div class="email-eyebrow">Coming Soon</div>
-      <h2>Get notified when Pro launches</h2>
-      <p>Join the waitlist for Pro features — multi-month analysis, quarterly tax estimates, Etsy API sync, and accountant-ready exports.</p>
+      <div class="email-eyebrow">Pro — Coming Soon</div>
+      <h2>Get early access to Pro features</h2>
+      <p>Pro unlocks powerful tools for serious Etsy sellers who want to stay on top of their finances year-round.</p>
       <ul class="email-perks">
-        <li>📊 Multi-month trend tracking</li>
+        <li>📊 Multi-month batch upload &amp; trend tracking</li>
         <li>🧾 Quarterly estimated tax calculator</li>
-        <li>🔗 Direct Etsy API connection (no CSV needed)</li>
+        <li>🔗 Direct Etsy API — no CSV needed</li>
         <li>📤 Accountant-ready PDF exports</li>
+        <li>📦 Per-product profit breakdown</li>
       </ul>
     </div>
     <div class="email-right">
@@ -1115,6 +1763,60 @@
     </div>
   </div>
 
+
+  <!-- TAX CALCULATOR (Pro) -->
+  <div class="tax-section" id="tax-section" style="display:none;">
+    <div class="tax-section-header">
+      <div class="tax-section-title">
+        <h3 class="section-title" style="margin:0;">Estimated Tax Calculator</h3>
+        <span class="tax-pro-badge">✦ Pro</span>
+      </div>
+      <span class="tax-disclaimer">Estimates only — consult a tax professional</span>
+    </div>
+
+    <!-- Gate: shown to free users -->
+    <div class="tax-pro-gate" id="tax-pro-gate" onclick="showProModal()">
+      <div style="font-size:32px;">🧾</div>
+      <h4>How much do you owe the IRS this quarter?</h4>
+      <p>Enter your filing status and income to get a quarterly estimated tax breakdown — SE tax, federal income tax, and your payment due date.</p>
+      <span class="unlock-link">Unlock Pro to calculate →</span>
+    </div>
+
+    <!-- Calculator: shown to Pro users -->
+    <div id="tax-calculator" style="display:none;">
+      <div class="tax-inputs">
+        <div class="tax-input-group">
+          <label class="tax-input-label">Filing Status</label>
+          <select class="tax-select" id="tax-filing-status" onchange="recalcTax()">
+            <option value="single">Single</option>
+            <option value="mfj">Married Filing Jointly</option>
+            <option value="mfs">Married Filing Separately</option>
+            <option value="hoh">Head of Household</option>
+          </select>
+        </div>
+        <div class="tax-input-group">
+          <label class="tax-input-label">Other Annual Income <span>(W-2, spouse, etc.)</span></label>
+          <input type="number" class="tax-input" id="tax-other-income" value="0" min="0" step="1000" onchange="recalcTax()" oninput="recalcTax()" placeholder="0" />
+        </div>
+        <div class="tax-input-group">
+          <label class="tax-input-label">Business Expenses <span>(not in CSV)</span></label>
+          <input type="number" class="tax-input" id="tax-extra-expenses" value="0" min="0" step="100" onchange="recalcTax()" oninput="recalcTax()" placeholder="0" />
+        </div>
+        <div class="tax-input-group">
+          <label class="tax-input-label">Tax Year</label>
+          <select class="tax-select" id="tax-year" onchange="recalcTax()">
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tax-results-grid" id="tax-results-grid"></div>
+      <div class="tax-breakdown" id="tax-breakdown"></div>
+      <div class="tax-due-dates" id="tax-due-dates"></div>
+    </div>
+  </div>
+
   <!-- TRANSACTIONS TABLE -->
   <h3 class="section-title">Transactions</h3>
   <div class="table-wrap">
@@ -1149,8 +1851,11 @@
 
   <!-- EXPORT -->
   <div class="export-bar">
-    <button class="export-btn primary" onclick="exportCSV()">⬇ Export Clean P&amp;L (CSV)</button>
-    <button class="export-btn" onclick="window.print()">🖨 Print Summary</button>
+    <button class="export-btn primary" onclick="exportCSV()">⬇ Export P&amp;L (CSV)</button>
+    <button class="export-btn pro-pdf-btn" id="pdf-export-btn" onclick="handlePDFExport()">
+      📄 Accountant PDF <span class="tax-pro-badge" style="font-size:9px;padding:2px 7px;">✦ Pro</span>
+    </button>
+    <button class="export-btn" onclick="window.print()">🖨 Print</button>
   </div>
 </div>
 
@@ -1166,12 +1871,20 @@ let allRows = [];
 let currentFilter = 'all';
 const MAX_ROWS_INITIAL = 30;
 
+// ─── CACHED RENDER STATE (for PDF export) ───
+let lastRender = null; // populated by renderResults, read by exportPDF
+
 // ─── UPLOAD HANDLERS ───
 const csvInput = document.getElementById('csvInput');
 const dropZone = document.getElementById('dropZone');
 
+// ─── MULTI-FILE STATE ───
+let stagedFiles = []; // array of {name, text} objects
+
 csvInput.addEventListener('change', e => {
-  if (e.target.files[0]) processFile(e.target.files[0]);
+  const files = Array.from(e.target.files);
+  if (files.length) addFiles(files);
+  csvInput.value = ''; // reset so same files can be re-added
 });
 
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -1179,79 +1892,141 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-ove
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && file.name.endsWith('.csv')) processFile(file);
-  else showError('Please drop a .csv file.');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.csv'));
+  if (files.length) addFiles(files);
+  else showError('Please drop .csv files only.');
 });
 
-function processFile(file) {
+function addFiles(files) {
   showLoading(true);
   hideError();
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      parseAndRender(e.target.result, file.name);
-    } catch(err) {
-      showError('Could not parse file: ' + err.message);
+  let loaded = 0;
+  for (const file of files) {
+    // Skip duplicates by name
+    if (stagedFiles.find(f => f.name === file.name)) { loaded++; checkDone(); continue; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      stagedFiles.push({ name: file.name, text: e.target.result });
+      loaded++;
+      checkDone();
+    };
+    reader.readAsText(file);
+  }
+
+  function checkDone() {
+    if (loaded === files.length) {
+      showLoading(false);
+      renderFilePills();
+      processAllFiles();
     }
-    showLoading(false);
-  };
-  reader.readAsText(file);
+  }
 }
 
-// ─── CSV PARSING ───
-function parseAndRender(csvText, filename) {
-  const result = Papa.parse(csvText.trim(), {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: h => h.trim()
-  });
+function removeFile(name) {
+  stagedFiles = stagedFiles.filter(f => f.name !== name);
+  renderFilePills();
+  if (stagedFiles.length > 0) processAllFiles();
+  else {
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('file-pills').innerHTML = '';
+  }
+}
 
-  if (!result.data || result.data.length === 0) {
-    showError('The CSV appears to be empty or could not be read.');
+function renderFilePills() {
+  const container = document.getElementById('file-pills');
+  container.innerHTML = stagedFiles.map(f => `
+    <div class="file-pill">
+      <span class="file-pill-icon">📄</span>
+      <span>${f.name.replace('.csv','')}</span>
+      <button class="file-pill-remove" onclick="removeFile('${f.name}')" title="Remove">×</button>
+    </div>
+  `).join('');
+}
+
+function processAllFiles() {
+  // Gate multi-month behind Pro
+  if (stagedFiles.length > 1 && !isProUnlocked()) {
+    showLoading(false);
+    showProModal();
     return;
   }
 
-  // Normalize column names (handle variations)
-  const rows = result.data.map(r => {
-    const n = {};
-    for (const k of Object.keys(r)) {
-      const key = k.trim().toLowerCase()
-        .replace(/\s+/g, '_')
-        .replace(/&/g, 'and')
-        .replace(/[^a-z0-9_]/g, '');
-      n[key] = (r[k] || '').trim();
+  showLoading(true);
+  hideError();
+  try {
+    const allNormalizedRows = [];
+    let COL = null;
+
+    for (const { name, text } of stagedFiles) {
+      const result = Papa.parse(text.trim(), {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: h => h.trim()
+      });
+
+      if (!result.data || result.data.length === 0) continue;
+
+      const rows = result.data.map(r => {
+        const n = {};
+        for (const k of Object.keys(r)) {
+          const key = k.trim().toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/&/g, 'and')
+            .replace(/[^a-z0-9_]/g, '');
+          n[key] = (r[k] || '').trim();
+        }
+        return n;
+      });
+
+      // Detect columns from first file only
+      if (!COL) {
+        const cols = Object.keys(rows[0]);
+        const find = names => cols.find(c => names.some(n => c.includes(n))) || null;
+        COL = {
+          date:     find(['date']),
+          type:     find(['type']),
+          title:    find(['title']),
+          info:     find(['info']),
+          currency: find(['currency']),
+          amount:   find(['amount']),
+          fees:     find(['fees_and_taxes','fees','fee']),
+          net:      find(['net'])
+        };
+        if (!COL.amount && !COL.net) {
+          showError('Could not detect Etsy Payments columns. Make sure you downloaded from Finances → Payment Account → [Month] → CSV.');
+          showLoading(false);
+          return;
+        }
+      }
+
+      allNormalizedRows.push(...rows);
     }
-    return n;
-  });
 
-  // Detect columns
-  const sample = rows[0];
-  const cols = Object.keys(sample);
+    if (allNormalizedRows.length === 0) {
+      showError('No valid data found in the uploaded files.');
+      showLoading(false);
+      return;
+    }
 
-  // Find key columns (flexible matching)
-  const find = names => cols.find(c => names.some(n => c.includes(n))) || null;
+    // Sort all rows by date ascending
+    allNormalizedRows.sort((a, b) => {
+      const da = new Date(a[COL.date] || 0);
+      const db = new Date(b[COL.date] || 0);
+      return da - db;
+    });
 
-  const COL = {
-    date:     find(['date']),
-    type:     find(['type']),
-    title:    find(['title']),
-    info:     find(['info']),
-    currency: find(['currency']),
-    amount:   find(['amount']),
-    fees:     find(['fees_and_taxes','fees','fee']),
-    net:      find(['net'])
-  };
+    parsedData = allNormalizedRows;
+    allRows = allNormalizedRows;
 
-  if (!COL.amount && !COL.net) {
-    showError('Could not detect Etsy Payments columns. Make sure you downloaded from Finances → Payment Account → [Month] → CSV.');
-    return;
+    const label = stagedFiles.length === 1
+      ? stagedFiles[0].name
+      : `${stagedFiles.length} months combined`;
+
+    renderResults(allNormalizedRows, COL, label);
+  } catch(err) {
+    showError('Could not parse files: ' + err.message);
   }
-
-  parsedData = rows;
-  allRows = rows;
-
-  renderResults(rows, COL, filename);
+  showLoading(false);
 }
 
 function parseAmt(val) {
@@ -1337,6 +2112,18 @@ function renderResults(rows, COL, filename) {
     if (isSale(r)) monthly[key].fees += Math.abs(r.fees);
   }
   const monthKeys = Object.keys(monthly).sort();
+
+  // ── Multi-month banner ──
+  const existingBanner = document.getElementById('multi-month-banner');
+  if (existingBanner) existingBanner.remove();
+
+  if (stagedFiles.length > 1) {
+    const banner = document.createElement('div');
+    banner.id = 'multi-month-banner';
+    banner.className = 'multi-month-banner';
+    banner.innerHTML = `📊 <span><strong>${stagedFiles.length} months combined</strong> — viewing ${rows.length} total transactions across your selected date range.</span>`;
+    document.getElementById('results').insertBefore(banner, document.getElementById('results').firstChild);
+  }
 
   // ── Render KPIs ──
   document.getElementById('results-title').textContent = 'Statement Analysis';
@@ -1450,6 +2237,17 @@ function renderResults(rows, COL, filename) {
 
   document.getElementById('results').style.display = 'block';
   document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Cache render state for PDF export
+  lastRender = {
+    grossRevenue, grossRefunds, totalFees, netProfit, margin,
+    k1099Gross, feeByType, dateRange, sym, currency,
+    monthly, monthKeys, typed, filename,
+    salesCount: sales.length, refundCount: refunds.length
+  };
+
+  // Show tax calculator section with current net profit
+  showTaxSection(netProfit);
 }
 
 // ─── TABLE RENDERING ───
@@ -1580,6 +2378,8 @@ function filterTable(filter, btn) {
 
 // ─── DEMO DATA ───
 function loadDemoData() {
+  stagedFiles = []; // clear any existing files
+  document.getElementById('file-pills').innerHTML = '';
   const demo = `Date,Type,Title,Info,Currency,Amount,Fees & Taxes,Net
 03/07/2026,Sale,Payment for Order #2891234,,USD,47.00,-2.20,44.80
 03/07/2026,Transaction,Vintage Ceramic Mug,Order #2891234,USD,0.00,-1.88,-1.88
@@ -1620,7 +2420,9 @@ function loadDemoData() {
 
   showLoading(true);
   setTimeout(() => {
-    parseAndRender(demo, 'demo-data.csv');
+    stagedFiles.push({ name: 'demo-data.csv', text: demo });
+    renderFilePills();
+    processAllFiles();
     showLoading(false);
   }, 400);
 }
@@ -1659,7 +2461,7 @@ async function submitWaitlist() {
   const feedback = document.getElementById('signup-feedback');
   const email = emailEl.value.trim();
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || email.indexOf('@') < 1 || email.indexOf('.') < 1) {
     feedback.textContent = 'Please enter a valid email address.';
     feedback.className = 'signup-feedback error';
     return;
@@ -1715,6 +2517,480 @@ function showError(msg) {
 function hideError() {
   document.getElementById('error-msg').style.display = 'none';
 }
+
+// ─── TAX CALCULATOR ENGINE ────────────────────────────────────────────────────
+
+// 2026 federal income tax brackets
+const TAX_BRACKETS = {
+  2026: {
+    single:  [[11925,0.10],[48475,0.12],[103350,0.22],[197300,0.24],[250525,0.32],[626350,0.35],[Infinity,0.37]],
+    mfj:     [[23850,0.10],[96950,0.12],[206700,0.22],[394600,0.24],[501050,0.32],[751600,0.35],[Infinity,0.37]],
+    mfs:     [[11925,0.10],[48475,0.12],[103350,0.22],[197300,0.24],[250525,0.32],[375800,0.35],[Infinity,0.37]],
+    hoh:     [[17000,0.10],[64850,0.12],[103350,0.22],[197300,0.24],[250500,0.32],[626350,0.35],[Infinity,0.37]],
+  },
+  2025: {
+    single:  [[11600,0.10],[47150,0.12],[100525,0.22],[191950,0.24],[243725,0.32],[609350,0.35],[Infinity,0.37]],
+    mfj:     [[23200,0.10],[94300,0.12],[201050,0.22],[383900,0.24],[487450,0.32],[731200,0.35],[Infinity,0.37]],
+    mfs:     [[11600,0.10],[47150,0.12],[100525,0.22],[191950,0.24],[243725,0.32],[365600,0.35],[Infinity,0.37]],
+    hoh:     [[16550,0.10],[63100,0.12],[100500,0.22],[191950,0.24],[243700,0.32],[609350,0.35],[Infinity,0.37]],
+  }
+};
+
+const STANDARD_DEDUCTION = {
+  2026: { single: 15000, mfj: 30000, mfs: 15000, hoh: 22500 },
+  2025: { single: 14600, mfj: 29200, mfs: 14600, hoh: 21900 },
+};
+
+const SE_TAX_RATE = 0.1530;      // 15.3% self-employment tax
+const SE_DEDUCTION_RATE = 0.50;  // 50% of SE tax is deductible
+const QBI_DEDUCTION_RATE = 0.20; // 20% QBI deduction for sole proprietors (simplified)
+
+// Quarterly due dates (approximate — always April 15, June 15, Sept 15, Jan 15)
+const QUARTERLY_DATES = {
+  2026: [
+    { label: 'Q1 2026', period: 'Jan–Mar', due: 'April 15, 2026', dueISO: '2026-04-15' },
+    { label: 'Q2 2026', period: 'Apr–May', due: 'June 16, 2026', dueISO: '2026-06-16' },
+    { label: 'Q3 2026', period: 'Jun–Aug', due: 'Sept 15, 2026', dueISO: '2026-09-15' },
+    { label: 'Q4 2026', period: 'Sep–Dec', due: 'Jan 15, 2027', dueISO: '2027-01-15' },
+  ],
+  2025: [
+    { label: 'Q1 2025', period: 'Jan–Mar', due: 'April 15, 2025', dueISO: '2025-04-15' },
+    { label: 'Q2 2025', period: 'Apr–May', due: 'June 16, 2025', dueISO: '2025-06-16' },
+    { label: 'Q3 2025', period: 'Jun–Aug', due: 'Sept 15, 2025', dueISO: '2025-09-15' },
+    { label: 'Q4 2025', period: 'Sep–Dec', due: 'Jan 15, 2026', dueISO: '2026-01-15' },
+  ]
+};
+
+// Store last calculated net profit for tax engine
+let lastNetProfit = 0;
+
+function calculateFederalTax(taxableIncome, filingStatus, year) {
+  const brackets = TAX_BRACKETS[year]?.[filingStatus] || TAX_BRACKETS[2026].single;
+  let tax = 0;
+  let prev = 0;
+  for (const [ceiling, rate] of brackets) {
+    if (taxableIncome <= prev) break;
+    const slice = Math.min(taxableIncome, ceiling) - prev;
+    tax += slice * rate;
+    prev = ceiling;
+    if (ceiling === Infinity) break;
+  }
+  return Math.max(0, tax);
+}
+
+function getMarginalRate(taxableIncome, filingStatus, year) {
+  const brackets = TAX_BRACKETS[year]?.[filingStatus] || TAX_BRACKETS[2026].single;
+  let prev = 0;
+  for (const [ceiling, rate] of brackets) {
+    if (taxableIncome <= ceiling) return rate;
+    prev = ceiling;
+  }
+  return 0.37;
+}
+
+function calcTax({ netProfit, otherIncome, extraExpenses, filingStatus, year }) {
+  // Net profit from CSV already has Etsy fees deducted
+  const adjustedProfit = Math.max(0, netProfit - extraExpenses);
+
+  // Self-employment tax (on 92.35% of net SE income)
+  const netSEIncome = adjustedProfit * 0.9235;
+  const seTax = netSEIncome * SE_TAX_RATE;
+
+  // Deductions: half of SE tax + standard deduction + 20% QBI
+  const seDeduction    = seTax * SE_DEDUCTION_RATE;
+  const stdDeduction   = STANDARD_DEDUCTION[year]?.[filingStatus] || 15000;
+  const qbiDeduction   = adjustedProfit * QBI_DEDUCTION_RATE;
+
+  const totalIncome    = adjustedProfit + otherIncome;
+  const taxableIncome  = Math.max(0, totalIncome - seDeduction - stdDeduction - qbiDeduction);
+
+  const federalTax     = calculateFederalTax(taxableIncome, filingStatus, year);
+  const totalTax       = seTax + federalTax;
+
+  // Effective rates
+  const effectiveRate  = adjustedProfit > 0 ? totalTax / adjustedProfit : 0;
+  const marginalRate   = getMarginalRate(taxableIncome, filingStatus, year);
+
+  // Quarterly payment = total annual tax / 4 (simplified safe harbor)
+  const quarterlyPayment = totalTax / 4;
+
+  return {
+    adjustedProfit, netSEIncome, seTax, seDeduction,
+    stdDeduction, qbiDeduction, taxableIncome,
+    federalTax, totalTax, effectiveRate, marginalRate,
+    quarterlyPayment
+  };
+}
+
+function recalcTax() {
+  const filingStatus = document.getElementById('tax-filing-status')?.value || 'single';
+  const otherIncome  = parseFloat(document.getElementById('tax-other-income')?.value) || 0;
+  const extraExpenses= parseFloat(document.getElementById('tax-extra-expenses')?.value) || 0;
+  const year         = parseInt(document.getElementById('tax-year')?.value) || 2026;
+
+  const result = calcTax({ netProfit: lastNetProfit, otherIncome, extraExpenses, filingStatus, year });
+  renderTaxResults(result, year);
+}
+
+function renderTaxResults(r, year) {
+  const grid = document.getElementById('tax-results-grid');
+  const breakdown = document.getElementById('tax-breakdown');
+  const dueDates = document.getElementById('tax-due-dates');
+
+  if (!grid) return;
+
+  grid.innerHTML = `
+    <div class="tax-card highlight">
+      <div class="tax-card-label">Est. Quarterly Payment</div>
+      <div class="tax-card-value">${fmt(r.quarterlyPayment)}</div>
+      <div class="tax-card-sub">Pay 4× per year to IRS</div>
+    </div>
+    <div class="tax-card">
+      <div class="tax-card-label">Self-Employment Tax</div>
+      <div class="tax-card-value">${fmt(r.seTax)}</div>
+      <div class="tax-card-sub">15.3% on net SE income</div>
+    </div>
+    <div class="tax-card">
+      <div class="tax-card-label">Federal Income Tax</div>
+      <div class="tax-card-value">${fmt(r.federalTax)}</div>
+      <div class="tax-card-sub">${(r.marginalRate * 100).toFixed(0)}% marginal rate</div>
+    </div>
+    <div class="tax-card">
+      <div class="tax-card-label">Total Annual Est. Tax</div>
+      <div class="tax-card-value">${fmt(r.totalTax)}</div>
+      <div class="tax-card-sub">${(r.effectiveRate * 100).toFixed(1)}% effective rate</div>
+    </div>
+  `;
+
+  breakdown.innerHTML = `
+    <div class="tax-breakdown-row">
+      <span class="tax-row-label">Net profit from CSV</span>
+      <span class="tax-row-rate"></span>
+      <span class="tax-row-amount">${fmt(lastNetProfit)}</span>
+    </div>
+    <div class="tax-breakdown-row">
+      <span class="tax-row-label">Additional business expenses</span>
+      <span class="tax-row-rate"></span>
+      <span class="tax-row-amount">− ${fmt(parseFloat(document.getElementById('tax-extra-expenses')?.value)||0)}</span>
+    </div>
+    <div class="tax-breakdown-row">
+      <span class="tax-row-label">½ SE tax deduction</span>
+      <span class="tax-row-rate">IRS rule</span>
+      <span class="tax-row-amount">− ${fmt(r.seDeduction)}</span>
+    </div>
+    <div class="tax-breakdown-row">
+      <span class="tax-row-label">QBI deduction (20%)</span>
+      <span class="tax-row-rate">Sec. 199A</span>
+      <span class="tax-row-amount">− ${fmt(r.qbiDeduction)}</span>
+    </div>
+    <div class="tax-breakdown-row">
+      <span class="tax-row-label">Standard deduction</span>
+      <span class="tax-row-rate">${document.getElementById('tax-filing-status')?.options[document.getElementById('tax-filing-status')?.selectedIndex]?.text||''}</span>
+      <span class="tax-row-amount">− ${fmt(r.stdDeduction)}</span>
+    </div>
+    <div class="tax-breakdown-row">
+      <span class="tax-row-label">Federal taxable income</span>
+      <span class="tax-row-rate"></span>
+      <span class="tax-row-amount">${fmt(r.taxableIncome)}</span>
+    </div>
+    <div class="tax-breakdown-row">
+      <span class="tax-row-label" style="color:var(--etsy);font-weight:700;">Total estimated tax owed</span>
+      <span class="tax-row-rate"></span>
+      <span class="tax-row-amount" style="color:var(--etsy);">${fmt(r.totalTax)}</span>
+    </div>
+  `;
+
+  const today = new Date();
+  const quarters = QUARTERLY_DATES[year] || QUARTERLY_DATES[2026];
+  dueDates.innerHTML = quarters.map(q => {
+    const due = new Date(q.dueISO);
+    const isCurrent = due >= today && (quarters.find(p => new Date(p.dueISO) < today && new Date(p.dueISO) >= new Date(today.getFullYear(), today.getMonth() - 3, today.getDate())) || quarters[0]) === q
+      || (due >= today && quarters.indexOf(q) === quarters.findIndex(p => new Date(p.dueISO) >= today));
+    return `<div class="tax-due-pill ${isCurrent ? 'current' : ''}">
+      <span>${q.label}</span>
+      <span style="color:var(--border)">·</span>
+      <span>${q.period}</span>
+      <span style="color:var(--border)">·</span>
+      <span class="due-date">Due ${q.due}${isCurrent ? ' ← next' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function showTaxSection(netProfit) {
+  lastNetProfit = netProfit;
+  const section = document.getElementById('tax-section');
+  if (!section) return;
+  section.style.display = 'block';
+
+  if (isProUnlocked()) {
+    document.getElementById('tax-pro-gate').style.display = 'none';
+    document.getElementById('tax-calculator').style.display = 'block';
+    recalcTax();
+  } else {
+    document.getElementById('tax-pro-gate').style.display = 'block';
+    document.getElementById('tax-calculator').style.display = 'none';
+  }
+}
+
+
+// ─── PDF EXPORT ──────────────────────────────────────────────────────────────
+
+function handlePDFExport() {
+  if (!isProUnlocked()) {
+    showProModal();
+    return;
+  }
+  if (!lastRender) {
+    alert('Please upload a CSV file first.');
+    return;
+  }
+  exportPDF();
+}
+
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const r = lastRender;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+  // ── Palette ──
+  const ETSY    = [241, 100, 30];
+  const INK     = [26,  22,  18];
+  const MID     = [74,  69,  64];
+  const LIGHT   = [138, 132, 128];
+  const CREAM   = [245, 240, 232];
+  const GREEN   = [26,  122, 74];
+  const RED     = [192, 57,  43];
+  const BORDER  = [224, 217, 206];
+  const WHITE   = [255, 255, 255];
+  const GOLD    = [200, 148, 26];
+
+  const W = 612; // letter width in pts
+  const H = 792;
+  const ML = 48; // margin left
+  const MR = W - 48; // margin right
+  const CW = MR - ML; // content width
+
+  let y = 0;
+
+  // ── helpers ──
+  const setFont = (style, size, color) => {
+    doc.setFont('helvetica', style);
+    doc.setFontSize(size);
+    if (color) doc.setTextColor(...color);
+  };
+
+  const text = (str, x, yy, opts) => doc.text(str, x, yy, opts);
+
+  const rule = (yy, color = BORDER, thickness = 0.5) => {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(thickness);
+    doc.line(ML, yy, MR, yy);
+  };
+
+  const rect = (x, yy, w, h, fillColor, strokeColor) => {
+    if (fillColor) doc.setFillColor(...fillColor);
+    if (strokeColor) { doc.setDrawColor(...strokeColor); doc.setLineWidth(0.5); }
+    const style = fillColor && strokeColor ? 'FD' : fillColor ? 'F' : 'D';
+    doc.roundedRect(x, yy, w, h, 4, 4, style);
+  };
+
+  const kpiBox = (x, yy, w, h, label, value, sub, accentColor) => {
+    rect(x, yy, w, h, CREAM, BORDER);
+    // accent bar
+    doc.setFillColor(...accentColor);
+    doc.roundedRect(x, yy, 4, h, 2, 2, 'F');
+    setFont('bold', 7.5, LIGHT);
+    text(label.toUpperCase(), x + 14, yy + 14);
+    setFont('bold', 16, INK);
+    text(value, x + 14, yy + 32);
+    setFont('normal', 7.5, LIGHT);
+    text(sub, x + 14, yy + 44);
+  };
+
+  // ── PAGE 1 ──────────────────────────────────────────────────────────────────
+
+  // Header bar
+  doc.setFillColor(...ETSY);
+  doc.rect(0, 0, W, 56, 'F');
+
+  setFont('bold', 18, WHITE);
+  text('EtsyFinance', ML, 34);
+  setFont('normal', 9, [255, 200, 170]);
+  text('Profit & Loss Statement', ML, 47);
+
+  // Date range + generated date (right side)
+  setFont('normal', 8, [255, 200, 170]);
+  const genDate = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  text(`Period: ${r.dateRange}`, MR, 34, { align: 'right' });
+  text(`Generated: ${genDate}`, MR, 47, { align: 'right' });
+
+  y = 80;
+
+  // ── KPI Grid (2×2) ──
+  const kW = (CW - 12) / 2;
+  const kH = 58;
+
+  kpiBox(ML,      y,       kW, kH, 'Gross Revenue',  fmt(r.grossRevenue, r.sym),  `${r.salesCount} sales · ${fmt(r.grossRefunds, r.sym)} refunded`, ETSY);
+  kpiBox(ML+kW+12, y,      kW, kH, 'Total Fees',     fmt(r.totalFees, r.sym),     r.grossRevenue > 0 ? ((r.totalFees/r.grossRevenue)*100).toFixed(1)+'% of gross' : '—', RED);
+  kpiBox(ML,      y+kH+10, kW, kH, 'Net Profit',     fmt(r.netProfit, r.sym),     ((r.margin||0)*100).toFixed(1)+'% profit margin', GREEN);
+  kpiBox(ML+kW+12, y+kH+10, kW, kH, '1099-K Amount', fmt(r.k1099Gross, r.sym),   r.k1099Gross >= 600 ? '⚠ Above $600 threshold' : 'Below $600 threshold', GOLD);
+
+  y += kH * 2 + 10 + 24;
+
+  // ── Fee Breakdown ──
+  rule(y, BORDER); y += 14;
+  setFont('bold', 10, INK);
+  text('Fee Breakdown', ML, y); y += 16;
+
+  const sortedFees = Object.entries(r.feeByType).sort((a,b) => b[1]-a[1]);
+  if (sortedFees.length === 0) {
+    setFont('normal', 9, LIGHT);
+    text('No fee rows detected.', ML, y); y += 14;
+  } else {
+    // header row
+    doc.setFillColor(...CREAM);
+    doc.rect(ML, y-10, CW, 18, 'F');
+    setFont('bold', 8, LIGHT);
+    text('FEE TYPE', ML+8, y);
+    text('AMOUNT', MR-80, y, { align: 'right' });
+    text('% OF GROSS', MR, y, { align: 'right' });
+    y += 6; rule(y, BORDER, 0.3); y += 10;
+
+    for (const [label, amt] of sortedFees) {
+      const pct = r.grossRevenue > 0 ? ((amt/r.grossRevenue)*100).toFixed(1)+'%' : '—';
+      setFont('normal', 9, INK);
+      text(label + ' Fees', ML+8, y);
+      setFont('normal', 9, RED);
+      text(fmt(amt, r.sym), MR-80, y, { align: 'right' });
+      setFont('normal', 9, LIGHT);
+      text(pct, MR, y, { align: 'right' });
+      y += 16;
+      rule(y-6, [235,228,220], 0.3);
+    }
+
+    // Totals row
+    y += 2;
+    doc.setFillColor(...CREAM);
+    doc.rect(ML, y-10, CW, 18, 'F');
+    setFont('bold', 9, INK);
+    text('Total Fees', ML+8, y);
+    doc.setTextColor(...RED);
+    text(fmt(r.totalFees, r.sym), MR-80, y, { align: 'right' });
+    doc.setTextColor(...LIGHT);
+    const totalPct = r.grossRevenue > 0 ? ((r.totalFees/r.grossRevenue)*100).toFixed(1)+'%' : '—';
+    text(totalPct, MR, y, { align: 'right' });
+    y += 20;
+  }
+
+  // ── Monthly Breakdown (if available) ──
+  if (r.monthKeys && r.monthKeys.length >= 2) {
+    y += 4;
+    rule(y, BORDER); y += 14;
+    setFont('bold', 10, INK);
+    text('Monthly Trend', ML, y); y += 16;
+
+    // header
+    doc.setFillColor(...CREAM);
+    doc.rect(ML, y-10, CW, 18, 'F');
+    setFont('bold', 8, LIGHT);
+    text('MONTH', ML+8, y);
+    text('GROSS REVENUE', ML+140, y, { align: 'right' });
+    text('TOTAL FEES', ML+240, y, { align: 'right' });
+    text('NET PROFIT', MR, y, { align: 'right' });
+    y += 6; rule(y, BORDER, 0.3); y += 10;
+
+    for (const k of r.monthKeys) {
+      const m = r.monthly[k];
+      const net = m.gross - m.fees;
+
+      // Check if we need a new page
+      if (y > H - 100) {
+        doc.addPage();
+        y = 48;
+      }
+
+      setFont('normal', 9, INK);
+      text(k, ML+8, y);
+      setFont('normal', 9, [74,69,64]);
+      text(fmt(m.gross, r.sym), ML+140, y, { align: 'right' });
+      doc.setTextColor(...RED);
+      text(fmt(m.fees, r.sym), ML+240, y, { align: 'right' });
+      doc.setTextColor(net >= 0 ? GREEN[0] : RED[0], net >= 0 ? GREEN[1] : RED[1], net >= 0 ? GREEN[2] : RED[2]);
+      text(fmt(net, r.sym), MR, y, { align: 'right' });
+      y += 16;
+      rule(y-6, [235,228,220], 0.3);
+    }
+    y += 8;
+  }
+
+  // ── 1099-K Notice ──
+  if (y > H - 140) { doc.addPage(); y = 48; }
+
+  y += 4;
+  rule(y, BORDER); y += 14;
+  setFont('bold', 10, INK);
+  text('1099-K Notice', ML, y); y += 14;
+
+  const noticeColor = r.k1099Gross >= 600 ? [253, 240, 238] : [232, 245, 238];
+  const noticeBorder = r.k1099Gross >= 600 ? [224, 160, 154] : [163, 212, 184];
+  const noticeTextColor = r.k1099Gross >= 600 ? RED : GREEN;
+
+  doc.setFillColor(...noticeColor);
+  doc.setDrawColor(...noticeBorder);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(ML, y, CW, 52, 4, 4, 'FD');
+
+  setFont('bold', 9, noticeTextColor);
+  const noticeTitle = r.k1099Gross >= 600 ? '⚠  1099-K Threshold Reached' : 'ℹ  Below 1099-K Threshold';
+  text(noticeTitle, ML+12, y+14);
+  setFont('normal', 8, MID);
+  const noticeBody = r.k1099Gross >= 600
+    ? `Etsy will report your gross payments of ${fmt(r.k1099Gross, r.sym)} on your 1099-K — not your net profit of ${fmt(r.netProfit, r.sym)}. You can deduct the ${fmt(r.totalFees, r.sym)} in fees as a business expense.`
+    : `Your gross payments of ${fmt(r.k1099Gross, r.sym)} are below the $600 reporting threshold for this period. Track all fees as deductible business expenses.`;
+  const wrapped = doc.splitTextToSize(noticeBody, CW - 24);
+  doc.text(wrapped, ML+12, y+27);
+  y += 66;
+
+  // ── Footer ──
+  const footerY = H - 36;
+  rule(footerY - 8, BORDER, 0.5);
+  setFont('normal', 7.5, LIGHT);
+  text('Generated by EtsyFinance · etsyfinance.com · Data processed in your browser — nothing uploaded or stored.', ML, footerY);
+  text('This report is for informational purposes only. Consult a tax professional for tax advice.', ML, footerY + 11);
+  setFont('bold', 7.5, ETSY);
+  text(`Page 1`, MR, footerY, { align: 'right' });
+
+  // ── Save ──
+  const safeName = (r.dateRange || r.filename || 'report').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  doc.save(`etsyfinance-${safeName}.pdf`);
+}
+
 </script>
+
+<!-- PRO PAYWALL MODAL -->
+<div class="pro-modal-overlay" id="pro-modal" style="display:none;">
+  <div class="pro-modal">
+    <button class="pro-modal-close" onclick="closeProModal()">×</button>
+    <div class="pro-modal-badge">✦ Pro Feature</div>
+    <h2>Multi-month analysis is a Pro feature</h2>
+    <p>Combine multiple months to see your full-year profit, track trends, and get accurate 1099-K projections.</p>
+    <ul class="pro-modal-features">
+      <li><span>📊</span> Combine unlimited months at once</li>
+      <li><span>📈</span> Full-year trend charts & P&L</li>
+      <li><span>🧾</span> Accurate 1099-K projection across months</li>
+      <li><span>📤</span> Accountant-ready PDF exports <em style="font-size:12px;color:var(--ink-light)">(coming soon)</em></li>
+      <li><span>🔗</span> Direct Etsy API — no CSV needed <em style="font-size:12px;color:var(--ink-light)">(coming soon)</em></li>
+    </ul>
+    <a href="mailto:hello@etsyfinance.com?subject=EtsyFinance Pro&body=Hi! I'd like to get Pro access." class="pro-cta-btn">Get Pro Access →</a>
+    <div class="pro-modal-divider">already have a license key?</div>
+    <div class="pro-key-input-row">
+      <input type="text" class="pro-key-input" id="pro-key-input" placeholder="EFP-XXXX-XXXX-XXXX" maxlength="19" oninput="formatKeyInput(this)" />
+      <button class="pro-key-submit" onclick="submitLicenseKey()">Unlock</button>
+    </div>
+    <div class="pro-key-error" id="pro-key-error"></div>
+    <div class="pro-modal-footer">One-time purchase · Runs entirely in your browser · Cancel anytime</div>
+  </div>
+</div>
+
 </body>
 </html>
