@@ -798,6 +798,86 @@
 
   .bar:hover .tooltip { display: block; }
 
+  /* ─── EMAIL CAPTURE ─── */
+  .email-capture {
+    background: var(--ink);
+    padding: 64px 48px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .email-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  @media (max-width: 800px) {
+    .email-inner { grid-template-columns: 1fr; gap: 32px; }
+    .email-capture { padding: 48px 24px; }
+  }
+
+  .email-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--etsy);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .email-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--etsy);
+  }
+
+  .email-left h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    color: white;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    margin-bottom: 14px;
+  }
+
+  .email-left p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+
+  .email-perks {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .email-perks li {
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .email-right {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 8px;
+    overflow: hidden;
+  }
+
   .footer {
     text-align: center;
     padding: 40px;
@@ -834,6 +914,27 @@
       <p>or click to browse files</p>
       <div class="upload-cta">Choose CSV File</div>
       <div class="upload-hint">Your data never leaves your browser — 100% private</div>
+    </div>
+  </div>
+</section>
+
+<!-- EMAIL CAPTURE -->
+<section class="email-capture">
+  <div class="email-inner">
+    <div class="email-left">
+      <div class="email-eyebrow">Coming Soon</div>
+      <h2>Get notified when Pro launches</h2>
+      <p>Join the waitlist for Pro features — multi-month analysis, quarterly tax estimates, Etsy API sync, and accountant-ready exports.</p>
+      <ul class="email-perks">
+        <li>📊 Multi-month trend tracking</li>
+        <li>🧾 Quarterly estimated tax calculator</li>
+        <li>🔗 Direct Etsy API connection (no CSV needed)</li>
+        <li>📤 Accountant-ready PDF exports</li>
+      </ul>
+    </div>
+    <div class="email-right">
+      <script async src="https://subscribe-forms.beehiiv.com/embed.js"></script>
+      <iframe src="https://subscribe-forms.beehiiv.com/81686829-2856-460e-84c6-5b9078fd9fc8" class="beehiiv-embed" data-test-id="beehiiv-embed" frameborder="0" scrolling="no" style="width: 100%; height: 351px; margin: 0; border-radius: 12px !important; background-color: transparent; box-shadow: 0 0 #0000; max-width: 100%;"></iframe>
     </div>
   </div>
 </section>
