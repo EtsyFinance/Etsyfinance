@@ -878,6 +878,85 @@
     overflow: hidden;
   }
 
+  /* ─── SIGNUP BOX ─── */
+  .signup-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 32px;
+  }
+
+  .signup-box-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--etsy);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .signup-box-sub {
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .signup-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .signup-input {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .signup-input::placeholder { color: rgba(255,255,255,0.3); }
+  .signup-input:focus { border-color: var(--etsy); }
+
+  .signup-submit {
+    background: var(--etsy);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+
+  .signup-submit:hover { background: var(--etsy-dark); }
+  .signup-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .signup-feedback {
+    font-size: 13px;
+    min-height: 20px;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .signup-feedback.success { color: #6de0a0; }
+  .signup-feedback.error { color: #ff8080; }
+
+  .signup-note {
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    font-family: 'DM Mono', monospace;
+  }
+
   .footer {
     text-align: center;
     padding: 40px;
@@ -933,8 +1012,16 @@
       </ul>
     </div>
     <div class="email-right">
-      <script async src="https://subscribe-forms.beehiiv.com/embed.js"></script>
-      <iframe src="https://subscribe-forms.beehiiv.com/81686829-2856-460e-84c6-5b9078fd9fc8" class="beehiiv-embed" data-test-id="beehiiv-embed" frameborder="0" scrolling="no" style="width: 100%; height: 351px; margin: 0; border-radius: 12px !important; background-color: transparent; box-shadow: 0 0 #0000; max-width: 100%;"></iframe>
+      <div class="signup-box">
+        <div class="signup-box-label">Join the waitlist</div>
+        <p class="signup-box-sub">Get notified when Pro launches. No spam, ever.</p>
+        <div class="signup-input-row">
+          <input type="email" id="waitlist-email" placeholder="your@email.com" class="signup-input" />
+          <button onclick="submitWaitlist()" class="signup-submit" id="signup-btn">Join &rarr;</button>
+        </div>
+        <div id="signup-feedback" class="signup-feedback"></div>
+        <div class="signup-note">Free forever &middot; Unsubscribe anytime</div>
+      </div>
     </div>
   </div>
 </section>
@@ -1564,6 +1651,61 @@ function exportCSV() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ─── WAITLIST SIGNUP ───
+async function submitWaitlist() {
+  const emailEl = document.getElementById('waitlist-email');
+  const btn = document.getElementById('signup-btn');
+  const feedback = document.getElementById('signup-feedback');
+  const email = emailEl.value.trim();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    feedback.textContent = 'Please enter a valid email address.';
+    feedback.className = 'signup-feedback error';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Joining...';
+  feedback.textContent = '';
+  feedback.className = 'signup-feedback';
+
+  try {
+    const res = await fetch('https://api.beehiiv.com/v2/publications/pub_81686829-2856-460e-84c6-5b9078fd9fc8/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        reactivate_existing: false,
+        send_welcome_email: true,
+        utm_source: 'etsyfinance_website',
+        utm_medium: 'waitlist_form'
+      })
+    });
+
+    if (res.ok || res.status === 201) {
+      feedback.textContent = '✓ You're on the list! We'll be in touch.';
+      feedback.className = 'signup-feedback success';
+      emailEl.value = '';
+      btn.textContent = 'Joined ✓';
+    } else {
+      throw new Error('API error ' + res.status);
+    }
+  } catch (err) {
+    // Fallback: open Beehiiv subscribe page in new tab
+    window.open('https://subscribe-forms.beehiiv.com/81686829-2856-460e-84c6-5b9078fd9fc8', '_blank');
+    feedback.textContent = '↗ Opened signup in a new tab.';
+    feedback.className = 'signup-feedback success';
+    btn.textContent = 'Join →';
+    btn.disabled = false;
+  }
+}
+
+// Allow Enter key in email field
+document.addEventListener('DOMContentLoaded', () => {
+  const emailEl = document.getElementById('waitlist-email');
+  if (emailEl) emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') submitWaitlist(); });
+});
 
 // ─── UI HELPERS ───
 function showLoading(show) {
