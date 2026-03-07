@@ -1,17 +1,20 @@
 export default async function handler(req, res) {
-  // Only allow POST
+  // Handle CORS preflight
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  const { email } = req.body || {};
 
-  const { email } = req.body;
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || email.indexOf('@') < 1 || email.indexOf('.') < 1) {
     return res.status(400).json({ error: 'Invalid email address' });
   }
 
@@ -19,6 +22,7 @@ export default async function handler(req, res) {
   const BEEHIIV_PUB_ID = process.env.BEEHIIV_PUB_ID;
 
   if (!BEEHIIV_API_KEY || !BEEHIIV_PUB_ID) {
+    console.error('Missing env vars:', { BEEHIIV_API_KEY: !!BEEHIIV_API_KEY, BEEHIIV_PUB_ID: !!BEEHIIV_PUB_ID });
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
@@ -41,15 +45,16 @@ export default async function handler(req, res) {
       }
     );
 
+    const responseText = await response.text();
+    console.log('Beehiiv response:', response.status, responseText);
+
     if (response.ok || response.status === 201) {
       return res.status(200).json({ success: true });
     } else {
-      const err = await response.text();
-      console.error('Beehiiv error:', err);
-      return res.status(response.status).json({ error: 'Subscription failed' });
+      return res.status(response.status).json({ error: 'Subscription failed', detail: responseText });
     }
   } catch (err) {
     console.error('Fetch error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', detail: err.message });
   }
 }
