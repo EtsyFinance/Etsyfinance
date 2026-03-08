@@ -395,17 +395,33 @@ function deactivateLicense() {
   .hero::before {
     content: '';
     position: absolute;
-    top: -60px;
-    right: -60px;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(241,100,30,0.15) 0%, transparent 70%);
+    top: -80px;
+    right: -80px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(241,100,30,0.12) 0%, transparent 65%);
     pointer-events: none;
   }
 
   .hero-inner {
-    max-width: 680px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
     position: relative;
+  }
+
+  .hero-copy { /* left column */ }
+
+  .hero-upload { /* right column */ }
+
+  @media (max-width: 860px) {
+    .hero-inner {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
   }
 
   .hero-eyebrow {
@@ -448,6 +464,34 @@ function deactivateLicense() {
     line-height: 1.7;
     max-width: 520px;
     margin-bottom: 40px;
+  }
+
+  /* ─── HERO STATS ─── */
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hero-stat-val {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    color: var(--etsy);
+  }
+
+  .hero-stat-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    line-height: 1.4;
+    max-width: 100px;
   }
 
   /* ─── UPLOAD ZONE ─── */
@@ -1802,10 +1846,17 @@ function deactivateLicense() {
 <!-- HERO / UPLOAD -->
 <section class="hero">
   <div class="hero-inner">
-    <div class="hero-eyebrow">For Etsy Sellers</div>
-    <h1>Finally know your<br><em>real profit.</em></h1>
-    <p>Upload your Etsy Payments statement CSV and get an instant breakdown of gross revenue, every fee category, net profit, and your projected 1099-K amount — in seconds.</p>
-
+    <div class="hero-copy">
+      <div class="hero-eyebrow">For Etsy Sellers</div>
+      <h1>Finally know your<br><em>real profit.</em></h1>
+      <p>Upload your Etsy Payments statement CSV and get an instant breakdown of gross revenue, every fee category, net profit, and your projected 1099-K amount — in seconds.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="hero-stat-val">100%</span><span class="hero-stat-label">Private — data stays in your browser</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">Free</span><span class="hero-stat-label">No account required</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">&lt;10s</span><span class="hero-stat-label">Instant CSV analysis</span></div>
+      </div>
+    </div>
+    <div class="hero-upload">
     <div class="upload-zone" id="dropZone">
       <input type="file" id="csvInput" accept=".csv" multiple />
       <div class="upload-icon">📂</div>
@@ -1818,6 +1869,7 @@ function deactivateLicense() {
       </div>
       <div id="file-pills" class="file-pills"></div>
     </div>
+    </div><!-- /.hero-upload -->
   </div>
 </section>
 
