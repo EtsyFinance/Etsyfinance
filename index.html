@@ -137,7 +137,9 @@ async function startCheckout() {
     // Show error under button
     const errEl = document.getElementById('checkout-error');
     if (errEl) {
-      errEl.textContent = 'Something went wrong. Please try again or email hello@etsyfinance.com.';
+      errEl.textContent = err.message.includes('No such') || err.message.includes('invalid')
+        ? `Stripe config error: ${err.message} — check your STRIPE_PRICE_ID in Vercel.`
+        : `Something went wrong: ${err.message}. Email hello@etsyfinance.com if this persists.`;
     }
   }
 }
