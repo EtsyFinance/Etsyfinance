@@ -56,7 +56,7 @@ async function submitLicenseKey() {
     errorEl.textContent = '✓ Pro unlocked! Processing your files…';
     setTimeout(() => {
       closeProModal();
-      processAllFiles(); // resume the blocked upload
+      processAllFiles();
     }, 900);
   } else {
     input.classList.add('error');
@@ -296,7 +296,7 @@ function deactivateLicense() {
   if (bar) {
     bar.innerHTML = '<span>📊</span> <span>Want to combine multiple months? <strong>Unlock Pro →</strong></span>';
     bar.style.cssText = '';
-    bar.onclick = () => showProModal();
+    bar.onclick = null; bar.style.cursor = 'default';
   }
 }
 
@@ -1796,7 +1796,7 @@ function deactivateLicense() {
     <div class="logo-mark">E</div>
     <div class="logo-text">Etsy<span>Finance</span></div>
   </div>
-  <div class="header-tag">Free MVP · v0.1</div>
+  <div class="header-tag">Pro — Coming Soon</div>
 </header>
 
 <!-- HERO / UPLOAD -->
@@ -1813,8 +1813,8 @@ function deactivateLicense() {
       <p>Upload your Etsy Payments CSV for an instant breakdown</p>
       <div class="upload-cta">Choose CSV Files</div>
       <div class="upload-hint">Your data never leaves your browser — 100% private</div>
-      <div class="pro-unlock-bar" onclick="showProModal()" id="pro-unlock-bar">
-        <span>📊</span> <span>Want to combine multiple months? <strong>Unlock Pro →</strong></span>
+      <div class="pro-unlock-bar" id="pro-unlock-bar" style="cursor:default;">
+        <span>✦</span> <span>Multi-month analysis, tax calculator &amp; PDF export — <strong>Pro coming soon</strong></span>
       </div>
       <div id="file-pills" class="file-pills"></div>
     </div>
@@ -1822,12 +1822,12 @@ function deactivateLicense() {
 </section>
 
 <!-- EMAIL CAPTURE -->
-<section class="email-capture">
+<section class="email-capture" id="email-capture">
   <div class="email-inner">
     <div class="email-left">
-      <div class="email-eyebrow">✦ Pro — Now Available</div>
-      <h2>Get early access to Pro features</h2>
-      <p>Pro unlocks powerful tools for serious Etsy sellers who want to stay on top of their finances year-round.</p>
+      <div class="email-eyebrow">✦ Pro — Coming Soon</div>
+      <h2>Be first to know when Pro launches</h2>
+      <p>We're building powerful tools for serious Etsy sellers. Join the list and we'll email you the moment Pro goes live.</p>
       <ul class="email-perks">
         <li>📊 Multi-month batch upload &amp; trend tracking</li>
         <li>🧾 Quarterly estimated tax calculator</li>
@@ -1838,8 +1838,8 @@ function deactivateLicense() {
     </div>
     <div class="email-right">
       <div class="signup-box">
-        <div class="signup-box-label">Join the waitlist</div>
-        <p class="signup-box-sub">Get notified when Pro launches. No spam, ever.</p>
+        <div class="signup-box-label">Get notified at launch</div>
+        <p class="signup-box-sub">No spam. One email when Pro is ready.</p>
         <div class="signup-input-row">
           <input type="email" id="waitlist-email" placeholder="your@email.com" class="signup-input" />
           <button onclick="submitWaitlist()" class="signup-submit" id="signup-btn">Join &rarr;</button>
@@ -1952,11 +1952,11 @@ function deactivateLicense() {
     </div>
 
     <!-- Gate: shown to free users -->
-    <div class="tax-pro-gate" id="tax-pro-gate" onclick="showProModal()">
+    <div class="tax-pro-gate" id="tax-pro-gate">
       <div style="font-size:32px;">🧾</div>
       <h4>How much do you owe the IRS this quarter?</h4>
       <p>Enter your filing status and income to get a quarterly estimated tax breakdown — SE tax, federal income tax, and your payment due date.</p>
-      <span class="unlock-link">Unlock Pro to calculate →</span>
+      <span class="unlock-link">Coming soon — join the waitlist below to be notified</span>
     </div>
 
     <!-- Calculator: shown to Pro users -->
@@ -2029,8 +2029,8 @@ function deactivateLicense() {
   <!-- EXPORT -->
   <div class="export-bar">
     <button class="export-btn primary" onclick="exportCSV()">⬇ Export P&amp;L (CSV)</button>
-    <button class="export-btn pro-pdf-btn" id="pdf-export-btn" onclick="handlePDFExport()">
-      📄 Accountant PDF <span class="tax-pro-badge" style="font-size:9px;padding:2px 7px;">✦ Pro</span>
+    <button class="export-btn pro-pdf-btn" id="pdf-export-btn" disabled title="Coming soon" style="opacity:0.45;cursor:not-allowed;">
+      📄 Accountant PDF <span class="tax-pro-badge" style="font-size:9px;padding:2px 7px;">✦ Soon</span>
     </button>
     <button class="export-btn" onclick="window.print()">🖨 Print</button>
   </div>
@@ -2038,7 +2038,7 @@ function deactivateLicense() {
 
 <div class="footer">
   EtsyFinance v0.1 — Your data is processed entirely in your browser. Nothing is uploaded or stored.<br>
-  <a href="#">Join waitlist for Pro features</a> · Not affiliated with Etsy, Inc.
+  <a href="#email-capture" onclick="document.getElementById('waitlist-email').focus()">Join the Pro waitlist</a> · Not affiliated with Etsy, Inc.
 </div>
 
 <script>
@@ -2121,11 +2121,11 @@ function renderFilePills() {
 }
 
 function processAllFiles() {
-  // Gate multi-month behind Pro
-  if (stagedFiles.length > 1 && !isProUnlocked()) {
-    showLoading(false);
-    showProModal();
-    return;
+  // Multi-month is Pro-only (coming soon) — silently use only the first file
+  if (stagedFiles.length > 1) {
+    stagedFiles = stagedFiles.slice(0, 1);
+    const pills = document.getElementById('file-pills');
+    if (pills) pills.querySelectorAll('.file-pill').forEach((p, i) => { if (i > 0) p.style.opacity = '0.35'; });
   }
 
   showLoading(true);
@@ -2913,14 +2913,8 @@ function showTaxSection(netProfit) {
 // ─── PDF EXPORT ──────────────────────────────────────────────────────────────
 
 function handlePDFExport() {
-  if (!isProUnlocked()) {
-    showProModal();
-    return;
-  }
-  if (!lastRender) {
-    alert('Please upload a CSV file first.');
-    return;
-  }
+  // PDF export is Pro-only (coming soon) — button is disabled in HTML, this won't be called
+  if (!lastRender) { alert('Please upload a CSV file first.'); return; }
   exportPDF();
 }
 
