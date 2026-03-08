@@ -24,29 +24,11 @@ export default async function handler(req, res) {
       body: new URLSearchParams({
         'mode': 'payment',
         'payment_method_types[]': 'card',
-        // Use price_data inline — works with either a product ID (prod_...) or
-        // a price ID (price_...). If STRIPE_PRICE_ID starts with "price_" we use
-        // it directly; otherwise we treat it as a product ID and define the price inline.
-        ...(process.env.STRIPE_PRICE_ID?.startsWith('price_')
-          ? {
-              // Price ID — use directly
-              'line_items[0][price]': process.env.STRIPE_PRICE_ID,
-            }
-          : process.env.STRIPE_PRICE_ID?.startsWith('prod_')
-          ? {
-              // Product ID — define price inline, reference existing product
-              // Cannot mix 'product' and 'product_data' — use product only
-              'line_items[0][price_data][currency]': 'usd',
-              'line_items[0][price_data][unit_amount]': '900',
-              'line_items[0][price_data][product]': process.env.STRIPE_PRICE_ID,
-            }
-          : {
-              // Fallback: define everything inline (no env var set)
-              'line_items[0][price_data][currency]': 'usd',
-              'line_items[0][price_data][unit_amount]': '900',
-              'line_items[0][price_data][product_data][name]': 'EtsyFinance Pro',
-              'line_items[0][price_data][product_data][description]': 'Multi-month uploads, quarterly tax calculator, PDF export',
-            }),
+        // Define price fully inline — no Stripe product/price ID needed
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][unit_amount]': '900',
+        'line_items[0][price_data][product_data][name]': 'EtsyFinance Pro',
+        'line_items[0][price_data][product_data][description]': 'Multi-month uploads, quarterly tax calculator & PDF export',
         'line_items[0][quantity]': '1',
         'success_url': `${origin}/?session_id={CHECKOUT_SESSION_ID}&activated=true`,
         'cancel_url': `${origin}/`,
