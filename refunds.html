@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Refund Policy — ShopsTally</title>
+  <meta name="description" content="ShopsTally Refund & Cancellation Policy — 30-day money back guarantee." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #f5f0e8;
+      --paper: #faf8f3;
+      --ink: #1a1612;
+      --ink-mid: #4a4540;
+      --ink-light: #8a8480;
+      --etsy: #f1641e;
+      --etsy-dark: #c94d12;
+      --etsy-pale: #fff0eb;
+      --border: #e0d9ce;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--ink);
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--etsy);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px; color: white; font-style: italic;
+    }
+
+    .logo-text {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px; color: white; letter-spacing: -0.3px;
+    }
+
+    .logo-text span { color: var(--etsy); }
+
+    .header-tag {
+      font-size: 11px; color: rgba(255,255,255,0.4);
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    .page-hero {
+      background: var(--ink);
+      padding: 56px 48px 64px;
+    }
+
+    .page-hero-inner { max-width: 760px; }
+
+    .page-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px; color: var(--etsy);
+      letter-spacing: 2px; text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .page-eyebrow::before {
+      content: ''; display: block;
+      width: 24px; height: 1px; background: var(--etsy);
+    }
+
+    .page-hero h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(32px, 4vw, 48px);
+      color: white; line-height: 1.1; letter-spacing: -0.5px;
+      margin-bottom: 16px;
+    }
+
+    .page-hero p {
+      font-size: 15px; color: rgba(255,255,255,0.45);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .guarantee-banner {
+      background: var(--etsy);
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .guarantee-icon {
+      font-size: 40px; flex-shrink: 0;
+    }
+
+    .guarantee-text h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px; color: white;
+      margin-bottom: 4px;
+      border: none; padding: 0; margin-top: 0;
+    }
+
+    .guarantee-text p {
+      font-size: 14px; color: rgba(255,255,255,0.8);
+      margin: 0; line-height: 1.5;
+    }
+
+    .content {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 64px 48px 80px;
+    }
+
+    h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 24px; color: var(--ink);
+      margin-bottom: 12px; margin-top: 48px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h2:first-of-type { margin-top: 0; }
+
+    h3 {
+      font-size: 15px; font-weight: 600;
+      color: var(--ink); margin: 20px 0 8px;
+    }
+
+    p {
+      font-size: 15px; color: var(--ink-mid);
+      line-height: 1.8; margin-bottom: 16px;
+    }
+
+    ul {
+      margin: 0 0 16px 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    ul li {
+      font-size: 15px; color: var(--ink-mid);
+      line-height: 1.8; padding: 4px 0 4px 20px;
+      position: relative;
+    }
+
+    ul li::before {
+      content: '–';
+      position: absolute; left: 0;
+      color: var(--etsy);
+    }
+
+    .steps {
+      counter-reset: steps;
+      list-style: none;
+      padding: 0; margin: 0 0 16px;
+    }
+
+    .steps li {
+      counter-increment: steps;
+      padding: 12px 16px 12px 52px;
+      position: relative;
+      background: var(--cream);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 15px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+    }
+
+    .steps li::before {
+      content: counter(steps);
+      position: absolute; left: 16px; top: 50%;
+      transform: translateY(-50%);
+      width: 24px; height: 24px;
+      background: var(--etsy);
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .callout {
+      background: var(--etsy-pale);
+      border: 1px solid rgba(241,100,30,0.2);
+      border-left: 4px solid var(--etsy);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+
+    .callout p { margin: 0; }
+    .callout strong { color: var(--ink); }
+
+    .not-covered {
+      background: var(--cream);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 16px 0;
+    }
+
+    a { color: var(--etsy); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .contact-box {
+      background: var(--ink);
+      border-radius: 12px;
+      padding: 32px;
+      margin-top: 48px;
+      text-align: center;
+    }
+
+    .contact-box h3 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px; color: white;
+      margin-bottom: 8px;
+    }
+
+    .contact-box p {
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 20px; font-size: 14px;
+    }
+
+    .contact-btn {
+      display: inline-block;
+      background: var(--etsy);
+      color: white;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .contact-btn:hover {
+      background: var(--etsy-dark);
+      text-decoration: none;
+    }
+
+    .footer {
+      text-align: center; padding: 40px;
+      font-size: 12px; color: var(--ink-light);
+      border-top: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .footer a { color: var(--etsy); text-decoration: none; }
+
+    @media (max-width: 720px) {
+      header { padding: 0 24px; }
+      .page-hero { padding: 40px 24px 48px; }
+      .guarantee-banner { padding: 24px; flex-direction: column; text-align: center; }
+      .content { padding: 40px 24px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">
+    <div class="logo-mark">S</div>
+    <div class="logo-text">Shops<span>Tally</span></div>
+  </a>
+  <div class="header-tag">Refund Policy</div>
+</header>
+
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <div class="page-eyebrow">Legal</div>
+    <h1>Refund &amp; Cancellation Policy</h1>
+    <p>Last updated: March 8, 2026</p>
+  </div>
+</div>
+
+<div class="guarantee-banner">
+  <div class="guarantee-icon">🛡️</div>
+  <div class="guarantee-text">
+    <h2>30-Day Money-Back Guarantee</h2>
+    <p>Not happy with ShopsTally Pro? Email us within 30 days of purchase for a full, no-questions-asked refund.</p>
+  </div>
+</div>
+
+<div class="content">
+
+  <h2>Our Commitment</h2>
+  <p>We want you to feel completely confident purchasing ShopsTally Pro. If it's not the right fit for your shop, we'll refund you — no hoops, no hassle.</p>
+  <p>ShopsTally Pro is a one-time purchase license key (not a subscription), so there's nothing to cancel. This policy covers your right to a refund within 30 days of your purchase date.</p>
+
+  <h2>How to Request a Refund</h2>
+  <p>It's simple:</p>
+  <ol class="steps">
+    <li>Email us at <a href="mailto:hello@shopstally.com">hello@shopstally.com</a> with the subject line <strong>"Refund Request"</strong></li>
+    <li>Include the email address you used to purchase</li>
+    <li>We'll process your refund within 3–5 business days</li>
+  </ol>
+  <p>You don't need to explain why. You don't need to jump through any loops. If you're within 30 days and you want a refund, you'll get one.</p>
+
+  <h2>Eligibility</h2>
+  <h3>✅ You are eligible for a full refund if:</h3>
+  <ul>
+    <li>You purchased a Pro license key within the last 30 days</li>
+    <li>You contact us at <a href="mailto:hello@shopstally.com">hello@shopstally.com</a> with your purchase email</li>
+  </ul>
+
+  <h3>❌ Refunds are not available if:</h3>
+  <div class="not-covered">
+    <ul style="margin:0">
+      <li>More than 30 days have passed since your purchase date</li>
+      <li>The license key has already been refunded previously</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <p><strong>Edge cases:</strong> If you're outside the 30-day window but have a genuinely exceptional situation, reach out anyway — we'll do our best to work something out. We're a small team and we care about treating people fairly.</p>
+  </div>
+
+  <h2>How Refunds Are Processed</h2>
+  <p>Refunds are returned to the original payment method (credit or debit card) via Stripe, our payment processor. Processing time after we initiate the refund:</p>
+  <ul>
+    <li><strong>Credit / debit cards:</strong> 5–10 business days to appear on your statement</li>
+    <li><strong>Stripe balance:</strong> Immediate (if applicable)</li>
+  </ul>
+  <p>We'll confirm your refund by email once it's been initiated on our end.</p>
+
+  <h2>After a Refund</h2>
+  <p>Once your refund is processed, your license key will be deactivated. The free version of ShopsTally remains available to you — you can continue to use it to upload and analyze your CSV files at no cost.</p>
+
+  <h2>About the Free Version</h2>
+  <p>ShopsTally's core functionality — uploading your Etsy Payments CSV, viewing your income summary, and filtering by date range — is and will always be free. Pro features (tax calculator, accountant PDF export, multi-file upload) are the only paid features. We believe in being upfront about what costs money.</p>
+
+  <h2>Questions?</h2>
+  <p>If anything here is unclear or your situation isn't covered, just reach out. We'll respond within one business day.</p>
+
+  <div class="contact-box">
+    <h3>Get in touch</h3>
+    <p>We're a real team and we actually respond to emails.</p>
+    <a href="mailto:hello@shopstally.com" class="contact-btn">hello@shopstally.com</a>
+  </div>
+
+</div>
+
+<div class="footer">
+  <a href="/">← Back to ShopsTally</a> &nbsp;·&nbsp;
+  <a href="/privacy">Privacy Policy</a> &nbsp;·&nbsp;
+  Not affiliated with Etsy, Inc. — Etsy is a trademark of Etsy, Inc.
+</div>
+
+</body>
+</html>

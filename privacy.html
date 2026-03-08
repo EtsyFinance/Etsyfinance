@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — ShopsTally</title>
+  <meta name="description" content="ShopsTally Privacy Policy — how we handle your data." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #f5f0e8;
+      --paper: #faf8f3;
+      --ink: #1a1612;
+      --ink-mid: #4a4540;
+      --ink-light: #8a8480;
+      --etsy: #f1641e;
+      --etsy-dark: #c94d12;
+      --border: #e0d9ce;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--ink);
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--etsy);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px; color: white; font-style: italic;
+    }
+
+    .logo-text {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px; color: white; letter-spacing: -0.3px;
+    }
+
+    .logo-text span { color: var(--etsy); }
+
+    .header-tag {
+      font-size: 11px; color: rgba(255,255,255,0.4);
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    .page-hero {
+      background: var(--ink);
+      padding: 56px 48px 64px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .page-hero-inner { max-width: 760px; }
+
+    .page-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px; color: var(--etsy);
+      letter-spacing: 2px; text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .page-eyebrow::before {
+      content: ''; display: block;
+      width: 24px; height: 1px; background: var(--etsy);
+    }
+
+    .page-hero h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(32px, 4vw, 48px);
+      color: white; line-height: 1.1; letter-spacing: -0.5px;
+      margin-bottom: 16px;
+    }
+
+    .page-hero p {
+      font-size: 15px; color: rgba(255,255,255,0.45);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .content {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 64px 48px 80px;
+    }
+
+    .highlight-box {
+      background: #fff8f4;
+      border: 1px solid rgba(241,100,30,0.2);
+      border-left: 4px solid var(--etsy);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 48px;
+    }
+
+    .highlight-box p {
+      font-size: 15px; color: var(--ink-mid); line-height: 1.7;
+    }
+
+    .highlight-box strong { color: var(--ink); }
+
+    h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 24px; color: var(--ink);
+      margin-bottom: 12px; margin-top: 48px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h2:first-of-type { margin-top: 0; }
+
+    p {
+      font-size: 15px; color: var(--ink-mid);
+      line-height: 1.8; margin-bottom: 16px;
+    }
+
+    ul {
+      margin: 0 0 16px 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    ul li {
+      font-size: 15px; color: var(--ink-mid);
+      line-height: 1.8; padding: 4px 0 4px 20px;
+      position: relative;
+    }
+
+    ul li::before {
+      content: '–';
+      position: absolute; left: 0;
+      color: var(--etsy);
+    }
+
+    a { color: var(--etsy); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .section-tag {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--etsy);
+      background: var(--cream);
+      padding: 3px 8px; border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .footer {
+      text-align: center; padding: 40px;
+      font-size: 12px; color: var(--ink-light);
+      border-top: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .footer a { color: var(--etsy); text-decoration: none; }
+
+    @media (max-width: 720px) {
+      header { padding: 0 24px; }
+      .page-hero { padding: 40px 24px 48px; }
+      .content { padding: 40px 24px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">
+    <div class="logo-mark">S</div>
+    <div class="logo-text">Shops<span>Tally</span></div>
+  </a>
+  <div class="header-tag">Privacy Policy</div>
+</header>
+
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <div class="page-eyebrow">Legal</div>
+    <h1>Privacy Policy</h1>
+    <p>Last updated: March 8, 2026</p>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="highlight-box">
+    <p><strong>Short version:</strong> Your financial data never leaves your browser. ShopsTally processes everything locally on your device. We don't have a database of your transactions, revenue, or business data — because we never receive it in the first place.</p>
+  </div>
+
+  <h2>1. Who We Are</h2>
+  <p>ShopsTally ("we", "us", "our") is a financial analytics tool for Etsy sellers, accessible at <a href="https://shopstally.com">shopstally.com</a>. ShopsTally is not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.</p>
+
+  <h2>2. Data We Do NOT Collect</h2>
+  <p>We want to be explicit about what we don't do:</p>
+  <ul>
+    <li>We do not receive, store, or process your Etsy Payments CSV files on any server</li>
+    <li>We do not collect your sales data, revenue figures, or transaction history</li>
+    <li>We do not track which products you sell or how much you earn</li>
+    <li>We do not share any financial data with third parties — because we never have it</li>
+  </ul>
+  <p>All CSV parsing and financial calculations happen entirely within your web browser using JavaScript. No data is transmitted to our servers during this process.</p>
+
+  <h2>3. Data We Do Collect</h2>
+  <div class="section-tag">Email</div>
+  <p><strong>Waitlist / newsletter signups:</strong> If you choose to join our email waitlist, we collect your email address. This is stored with <a href="https://beehiiv.com" target="_blank">Beehiiv</a>, our email platform. We use it solely to notify you about ShopsTally product updates and the Pro launch. You can unsubscribe at any time using the link in any email we send.</p>
+
+  <div class="section-tag">Payments</div>
+  <p><strong>Pro license purchases:</strong> If you purchase a Pro license, your payment is processed by <a href="https://stripe.com" target="_blank">Stripe</a>. We receive confirmation of your purchase and your email address to deliver your license key. We do not store your credit card details — Stripe handles all payment data under their own privacy policy.</p>
+
+  <div class="section-tag">License Keys</div>
+  <p><strong>License key storage:</strong> When you activate a Pro license, your license key hash is stored in your browser's <code>localStorage</code>. This is local to your device and browser. We have no access to this data.</p>
+
+  <div class="section-tag">Analytics</div>
+  <p><strong>Basic site analytics:</strong> We may use Vercel's built-in analytics to collect anonymous, aggregated data such as page view counts, geographic region (country level), and device type. This data cannot be used to identify you individually and contains no financial information.</p>
+
+  <h2>4. Cookies</h2>
+  <p>ShopsTally does not use tracking cookies or advertising cookies. The only browser storage we use is <code>localStorage</code> for your Pro license key (if applicable), which is strictly functional and never transmitted to us.</p>
+
+  <h2>5. Third-Party Services</h2>
+  <p>We use the following third-party services, each with their own privacy policies:</p>
+  <ul>
+    <li><strong>Stripe</strong> — payment processing (<a href="https://stripe.com/privacy" target="_blank">stripe.com/privacy</a>)</li>
+    <li><strong>Beehiiv</strong> — email newsletter (<a href="https://beehiiv.com/privacy" target="_blank">beehiiv.com/privacy</a>)</li>
+    <li><strong>Vercel</strong> — website hosting and analytics (<a href="https://vercel.com/legal/privacy-policy" target="_blank">vercel.com/legal/privacy-policy</a>)</li>
+    <li><strong>Resend</strong> — transactional email delivery (<a href="https://resend.com/legal/privacy-policy" target="_blank">resend.com/legal/privacy-policy</a>)</li>
+  </ul>
+
+  <h2>6. Data Retention</h2>
+  <p>Email addresses collected for our waitlist are retained until you unsubscribe. Purchase records (email + license confirmation) are retained for up to 7 years for tax and accounting purposes. We do not retain any financial or transaction data from your CSV uploads — we never receive it.</p>
+
+  <h2>7. Your Rights</h2>
+  <p>You have the right to:</p>
+  <ul>
+    <li>Unsubscribe from our email list at any time</li>
+    <li>Request deletion of your email address from our waitlist by emailing us</li>
+    <li>Request a copy of any personal data we hold about you</li>
+  </ul>
+  <p>To exercise any of these rights, contact us at <a href="mailto:hello@shopstally.com">hello@shopstally.com</a>.</p>
+
+  <h2>8. Children's Privacy</h2>
+  <p>ShopsTally is not directed at children under 13. We do not knowingly collect personal information from children under 13. If you believe we have inadvertently collected such information, please contact us and we will delete it promptly.</p>
+
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. We will post the updated policy on this page with a revised date. For significant changes, we will notify waitlist subscribers by email.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions about this Privacy Policy? Email us at <a href="mailto:hello@shopstally.com">hello@shopstally.com</a>.</p>
+
+</div>
+
+<div class="footer">
+  <a href="/">← Back to ShopsTally</a> &nbsp;·&nbsp;
+  <a href="/refunds">Refund Policy</a> &nbsp;·&nbsp;
+  Not affiliated with Etsy, Inc. — Etsy is a trademark of Etsy, Inc.
+</div>
+
+</body>
+</html>
