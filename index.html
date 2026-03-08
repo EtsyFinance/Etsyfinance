@@ -107,12 +107,131 @@ document.getElementById('pro-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('pro-modal')) closeProModal();
 });
 
-// Show pro status in UI if already unlocked on load
-window.addEventListener('load', () => {
-  if (isProUnlocked()) {
-    showProStatus();
+
+// ─── STRIPE CHECKOUT ─────────────────────────────────────────────────────────
+
+async function startCheckout() {
+  const btn = document.getElementById('pro-checkout-btn');
+  if (!btn) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Redirecting to checkout…';
+
+  try {
+    const res = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.url) {
+      throw new Error(data.error || 'Could not create checkout session');
+    }
+
+    window.location.href = data.url;
+  } catch (err) {
+    console.error('Checkout error:', err);
+    btn.disabled = false;
+    btn.textContent = 'Get Pro Access — $9 →';
+    // Show error under button
+    const errEl = document.getElementById('checkout-error');
+    if (errEl) {
+      errEl.textContent = 'Something went wrong. Please try again or email hello@etsyfinance.com.';
+    }
   }
+}
+
+// ─── POST-PAYMENT ACTIVATION ──────────────────────────────────────────────────
+// Runs on page load — checks if we're returning from a successful Stripe payment
+
+async function checkPostPaymentActivation() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.get('activated') || !params.get('session_id')) return;
+
+  const sessionId = params.get('session_id');
+
+  // Clean URL immediately so refresh doesn't re-trigger
+  window.history.replaceState({}, '', '/');
+
+  try {
+    const res = await fetch(`/api/get-key?session_id=${encodeURIComponent(sessionId)}`);
+    const data = await res.json();
+
+    if (!res.ok || !data.key) throw new Error(data.error || 'Could not retrieve key');
+
+    // Auto-activate the key
+    const hash = await hashKey(data.key);
+    if (PRO_KEY_HASHES.has(hash)) {
+      try { localStorage.setItem(PRO_STORAGE_KEY, hash); } catch(e) {}
+      showActivationSuccess(data.key, data.email);
+    } else {
+      showActivationError('Key validation failed. Please check your email or contact hello@etsyfinance.com.');
+    }
+  } catch (err) {
+    console.error('Post-payment activation error:', err);
+    showActivationError('Could not auto-activate. Check your email for your license key.');
+  }
+}
+
+function showActivationSuccess(key, email) {
+  // Show a full-page success overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'activation-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(26,22,18,0.75);backdrop-filter:blur(8px);
+    z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;
+    animation:fadeIn 0.3s ease;
+  `;
+  overlay.innerHTML = `
+    <div style="background:#faf8f3;border-radius:20px;padding:40px;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 80px rgba(26,22,18,0.25);">
+      <div style="font-size:48px;margin-bottom:16px;">🎉</div>
+      <div style="display:inline-block;background:linear-gradient(135deg,#f1641e,#ff8c5a);color:white;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:16px;font-family:'DM Sans',sans-serif;">Pro Unlocked</div>
+      <h2 style="font-size:24px;font-weight:700;margin-bottom:10px;color:#1a1612;">You're all set!</h2>
+      <p style="font-size:14px;color:#4a4540;margin-bottom:24px;line-height:1.6;">
+        Pro is active${email ? ` for <strong>${email}</strong>` : ''}. Your license key has also been sent to your email.
+      </p>
+      <div style="background:#f5f0e8;border:1.5px solid #e0d9ce;border-radius:10px;padding:16px;margin-bottom:24px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#8a8480;margin-bottom:8px;">Your License Key</div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;letter-spacing:0.06em;color:#1a1612;">${key}</div>
+        <div style="font-size:11px;color:#8a8480;margin-top:6px;">Save this somewhere safe</div>
+      </div>
+      <button onclick="document.getElementById('activation-overlay').remove(); showProStatus();"
+        style="width:100%;padding:14px;background:#f1641e;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        Start Using Pro →
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  showProStatus();
+}
+
+function showActivationError(message) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(26,22,18,0.75);backdrop-filter:blur(8px);
+    z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;
+  `;
+  overlay.innerHTML = `
+    <div style="background:#faf8f3;border-radius:20px;padding:40px;max-width:440px;width:100%;text-align:center;">
+      <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:10px;">Activation Issue</h2>
+      <p style="font-size:14px;color:#4a4540;margin-bottom:20px;">${message}</p>
+      <button onclick="this.closest('[style]').remove()"
+        style="padding:12px 24px;background:#f1641e;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        OK
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// Run on every page load
+window.addEventListener('load', () => {
+  checkPostPaymentActivation();
+  if (isProUnlocked()) showProStatus();
 });
+
 
 function showProStatus() {
   // Hide the "Unlock Pro" bar, show a green pro badge instead
@@ -1648,7 +1767,7 @@ function showProStatus() {
 <section class="email-capture">
   <div class="email-inner">
     <div class="email-left">
-      <div class="email-eyebrow">Pro — Coming Soon</div>
+      <div class="email-eyebrow">✦ Pro — Now Available</div>
       <h2>Get early access to Pro features</h2>
       <p>Pro unlocks powerful tools for serious Etsy sellers who want to stay on top of their finances year-round.</p>
       <ul class="email-perks">
@@ -2978,17 +3097,18 @@ function exportPDF() {
       <li><span>📊</span> Combine unlimited months at once</li>
       <li><span>📈</span> Full-year trend charts & P&L</li>
       <li><span>🧾</span> Accurate 1099-K projection across months</li>
-      <li><span>📤</span> Accountant-ready PDF exports <em style="font-size:12px;color:var(--ink-light)">(coming soon)</em></li>
+      <li><span>📤</span> Accountant-ready PDF exports</li>
       <li><span>🔗</span> Direct Etsy API — no CSV needed <em style="font-size:12px;color:var(--ink-light)">(coming soon)</em></li>
     </ul>
-    <a href="mailto:hello@etsyfinance.com?subject=EtsyFinance Pro&body=Hi! I'd like to get Pro access." class="pro-cta-btn">Get Pro Access →</a>
+    <button class="pro-cta-btn" id="pro-checkout-btn" onclick="startCheckout()">Get Pro Access — $9 →</button>
+    <div id="checkout-error" style="font-size:12.5px;color:var(--red);min-height:16px;margin:6px 0;"></div>
     <div class="pro-modal-divider">already have a license key?</div>
     <div class="pro-key-input-row">
       <input type="text" class="pro-key-input" id="pro-key-input" placeholder="EFP-XXXX-XXXX-XXXX" maxlength="19" oninput="formatKeyInput(this)" />
       <button class="pro-key-submit" onclick="submitLicenseKey()">Unlock</button>
     </div>
     <div class="pro-key-error" id="pro-key-error"></div>
-    <div class="pro-modal-footer">One-time purchase · Runs entirely in your browser · Cancel anytime</div>
+    <div class="pro-modal-footer">One-time purchase · $9 · Instant delivery · 30-day money back guarantee</div>
   </div>
 </div>
 
