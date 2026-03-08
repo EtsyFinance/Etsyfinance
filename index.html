@@ -236,14 +236,70 @@ window.addEventListener('load', () => {
 
 
 function showProStatus() {
-  // Hide the "Unlock Pro" bar, show a green pro badge instead
   const bar = document.getElementById('pro-unlock-bar');
   if (bar) {
-    bar.innerHTML = '✦ Pro unlocked — drop multiple CSVs to combine months';
+    bar.innerHTML = '✦ Pro unlocked — drop multiple CSVs to combine months &nbsp;·&nbsp; <span style="text-decoration:underline;opacity:0.7;font-size:12px;" onclick="event.stopPropagation();showManageLicense()">manage license</span>';
     bar.style.cssText += 'cursor:default;background:var(--green-pale);border-color:rgba(26,122,74,0.25);color:var(--green);';
     bar.onclick = null;
   }
 }
+
+function showManageLicense() {
+  const overlay = document.createElement('div');
+  overlay.id = 'manage-license-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(26,22,18,0.75);backdrop-filter:blur(8px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#faf8f3;border-radius:20px;padding:36px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(26,22,18,0.25);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="display:inline-block;background:linear-gradient(135deg,#f1641e,#ff8c5a);color:white;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:20px;font-family:'DM Sans',sans-serif;">✦ Pro Active</div>
+        <button onclick="document.getElementById('manage-license-overlay').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#8a8480;line-height:1;">×</button>
+      </div>
+      <p style="font-size:14px;color:#4a4540;margin-bottom:20px;line-height:1.6;">
+        Pro is active on this browser. To use Pro on another device, enter your license key there.
+      </p>
+      <div style="font-size:13px;font-weight:600;color:#1a1612;margin-bottom:8px;">Enter a different key:</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" id="manage-key-input" placeholder="EFP-XXXX-XXXX-XXXX" maxlength="19"
+          oninput="formatKeyInput(this)"
+          style="flex:1;padding:10px 12px;border:1.5px solid #e0d9ce;border-radius:8px;font-family:'DM Mono',monospace;font-size:14px;background:#f5f0e8;outline:none;" />
+        <button onclick="reactivateLicense()" style="padding:10px 16px;background:#f1641e;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Apply</button>
+      </div>
+      <div id="manage-key-error" style="font-size:12px;color:var(--red);min-height:16px;"></div>
+      <div style="border-top:1px solid #e0d9ce;margin-top:20px;padding-top:16px;">
+        <button onclick="deactivateLicense()" style="background:none;border:none;font-size:13px;color:#8a8480;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;">Remove Pro from this browser</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function reactivateLicense() {
+  const input = document.getElementById('manage-key-input');
+  const errEl = document.getElementById('manage-key-error');
+  const key = (input?.value || '').trim().toUpperCase();
+  if (!key) { errEl.textContent = 'Please enter a key.'; return; }
+  const hash = await hashKey(key);
+  if (PRO_KEY_HASHES.has(hash)) {
+    try { localStorage.setItem(PRO_STORAGE_KEY, hash); } catch(e) {}
+    document.getElementById('manage-license-overlay')?.remove();
+    showProStatus();
+  } else {
+    errEl.textContent = 'Invalid key. Check your email for the correct key.';
+  }
+}
+
+function deactivateLicense() {
+  if (!confirm('Remove Pro from this browser? You can re-enter your key anytime.')) return;
+  try { localStorage.removeItem(PRO_STORAGE_KEY); } catch(e) {}
+  document.getElementById('manage-license-overlay')?.remove();
+  const bar = document.getElementById('pro-unlock-bar');
+  if (bar) {
+    bar.innerHTML = '<span>📊</span> <span>Want to combine multiple months? <strong>Unlock Pro →</strong></span>';
+    bar.style.cssText = '';
+    bar.onclick = () => showProModal();
+  }
+}
+
 
 
 </script>
