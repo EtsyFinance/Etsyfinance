@@ -18,37 +18,33 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid email address' });
   }
 
-  const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
-  const BEEHIIV_PUB_ID = process.env.BEEHIIV_PUB_ID;
+  const KIT_API_KEY = process.env.KIT_API_KEY;
+  const KIT_FORM_ID = process.env.KIT_FORM_ID;
 
-  if (!BEEHIIV_API_KEY || !BEEHIIV_PUB_ID) {
-    console.error('Missing env vars:', { BEEHIIV_API_KEY: !!BEEHIIV_API_KEY, BEEHIIV_PUB_ID: !!BEEHIIV_PUB_ID });
+  if (!KIT_API_KEY || !KIT_FORM_ID) {
+    console.error('Missing env vars:', { KIT_API_KEY: !!KIT_API_KEY, KIT_FORM_ID: !!KIT_FORM_ID });
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
   try {
+    // Subscribe email to Kit (ConvertKit) form
     const response = await fetch(
-      `https://api.beehiiv.com/v2/publications/${BEEHIIV_PUB_ID}/subscriptions`,
+      `https://api.convertkit.com/v3/forms/${KIT_FORM_ID}/subscribe`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${BEEHIIV_API_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          api_key: KIT_API_KEY,
           email,
-          reactivate_existing: false,
-          send_welcome_email: true,
-          utm_source: 'etsyfinance_website',
-          utm_medium: 'waitlist_form',
+          tags: ['shopstally-waitlist'],
         }),
       }
     );
 
     const responseText = await response.text();
-    console.log('Beehiiv response:', response.status, responseText);
+    console.log('Kit response:', response.status, responseText);
 
-    if (response.ok || response.status === 201) {
+    if (response.ok) {
       return res.status(200).json({ success: true });
     } else {
       return res.status(response.status).json({ error: 'Subscription failed', detail: responseText });
